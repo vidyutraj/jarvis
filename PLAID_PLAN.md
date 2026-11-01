@@ -28,7 +28,7 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
 | Task | Why it matters | Where | State |
 |------|----------------|-------|-------|
 | Put Sandbox keys in `.dev.vars` (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox`) yourself | Local testing; keys must never be pasted into chat or written by the agent (GUIDE-021) | https://dashboard.plaid.com/developers/keys | verified (2026-11-01: Sandbox requests succeed) |
-| Production secrets: `npx wrangler secret put PLAID_CLIENT_ID` / `PLAID_SECRET` | Production calls | terminal | needs_human |
+| Production secrets: `npx wrangler secret put PLAID_CLIENT_ID` / `PLAID_SECRET` (run in a real terminal; `!` gives no prompt) | Production calls | terminal | reported_done (2026-11-01; names confirmed, value proven at first connect) |
 | Confirm company profile is complete and the latest Plaid MSA is accepted | PNC is silently absent from production Link without the latest MSA (OAUTH-008, TASK-006) | https://dashboard.plaid.com/settings/company/profile | cannot_verify |
 | Data Transparency Messaging / Link customization "default" set up for production | INVALID_LINK_CUSTOMIZATION otherwise (PITFALL-002) | https://dashboard.plaid.com/link | cannot_verify |
 | Production access + Transactions in US production | Required for real banks | dashboard_get_state products | verified (2026-11-01: production authorized; transactions in US production) |
@@ -51,7 +51,8 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
 - [x] `jarvis_spending` voice tool; `jarvis_spending_page` signed link → `/spending` page
 - [x] Tests (Plaid mocked; 35 bank tests), docs
 - [x] End-to-end Sandbox run: `npm run test:sandbox` (2 personas, duplicate, reconnect) and `npm run test:hosted-link` (owner completed Platypus OAuth Bank via the Telegram Hosted Link)
-- [ ] Production: create D1 + Queue, remote migrations, secrets, deploy, link PNC and Barclays
+- [x] Production: D1 + Queue created, remote migrations, secrets, deployed (2026-11-01, version 6cbaf783)
+- [ ] Link PNC and Barclays
 
 ## Acceptance
 

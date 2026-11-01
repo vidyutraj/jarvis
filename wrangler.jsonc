@@ -45,7 +45,7 @@
 		{
 			"binding": "DB",
 			"database_name": "jarvis",
-			"database_id": "REPLACE_WITH_D1_DATABASE_ID",
+			"database_id": "cb8470a5-8de1-45cb-9f25-be9a9bef5192",
 			"migrations_dir": "migrations"
 		}
 	],

@@ -73,7 +73,7 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
    - [x] Tests (Plaid mocked; real ES256 signature checks)
    - [x] Sandbox end-to-end run (2026-11-01): `npm run test:sandbox` and `npm run test:hosted-link` (Platypus OAuth Bank via Telegram Hosted Link, so no redirect URI needed)
    - [ ] Plaid company profile + latest MSA confirmed (PNC needs it)
-   - [ ] Create D1 `jarvis` + Queue `jarvis-bank-jobs`, apply migrations remotely, set production secrets, deploy
+   - [x] Create D1 `jarvis` + Queue `jarvis-bank-jobs`, apply migrations remotely, set production secrets, deploy (2026-11-01, version 6cbaf783)
    - [ ] Connect PNC and Barclays by voice; confirm history import and the spending page
 6. **Maybe later:** a simple web dashboard for browsing notes (spending has its own page as of Phase 5).
 

@@ -10,6 +10,10 @@ export default defineConfig({
 				bindings: {
 					TELEGRAM_BOT_TOKEN: "test-bot-token",
 					TELEGRAM_CHAT_ID: "123456",
+					GOOGLE_CLIENT_ID: "test-google-client-id",
+					GOOGLE_CLIENT_SECRET: "test-google-client-secret",
+					ALLOWED_EMAIL: "owner@example.com",
+					MCP_RESOURCE: "https://jarvis.test/mcp",
 				},
 			},
 		}),

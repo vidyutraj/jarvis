@@ -1,5 +1,13 @@
 import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import type { z } from "zod";
+import type { AuthProps } from "../auth/props";
+
+/** What every tool handler receives besides its arguments. */
+export interface ToolContext {
+	env: Env;
+	/** The signed-in user and their Google tokens (encrypted at rest by the OAuth library). */
+	auth: AuthProps;
+}
 
 /** The house shape for a tool: one per file in src/tools/, listed in src/tools/index.ts. */
 export interface ToolDefinition<Schema extends z.ZodObject> {
@@ -9,11 +17,11 @@ export interface ToolDefinition<Schema extends z.ZodObject> {
 	description: string;
 	inputSchema: Schema;
 	/** Must resolve to a short, speakable result (see lib/respond.ts). Should not throw. */
-	handler: (args: z.output<Schema>, env: Env) => Promise<CallToolResult>;
+	handler: (args: z.output<Schema>, context: ToolContext) => Promise<CallToolResult>;
 }
 
 export interface Tool<Schema extends z.ZodObject = z.ZodObject> extends ToolDefinition<Schema> {
-	register: (server: McpServer, env: Env) => void;
+	register: (server: McpServer, context: ToolContext) => void;
 }
 
 /**
@@ -25,7 +33,7 @@ export function defineTool<Schema extends z.ZodObject>(
 ): Tool<Schema> {
 	return {
 		...definition,
-		register(server, env) {
+		register(server, context) {
 			// The SDK's callback type is conditional on the schema type, which TypeScript
 			// can't resolve for a generic, so register against the widened schema. The SDK
 			// validates args against this same schema before calling us, making the cast safe.
@@ -33,7 +41,7 @@ export function defineTool<Schema extends z.ZodObject>(
 			server.registerTool(
 				definition.name,
 				{ description: definition.description, inputSchema },
-				(args) => definition.handler(args as z.output<Schema>, env),
+				(args) => definition.handler(args as z.output<Schema>, context),
 			);
 		},
 	};

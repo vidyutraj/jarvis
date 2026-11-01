@@ -2,7 +2,7 @@
 
 A personal voice assistant: the user talks to Claude in the Claude app's voice mode, and this repo is a remote MCP server that gives Claude custom tools (notes, calendar, expenses, Gmail drafts, health data). Background, decisions and the roadmap live in `docs/PROJECT_CONTEXT.md`. Read it before planning new work.
 
-**Stack:** Cloudflare Workers, MCP via the Agents SDK (`agents/mcp/server` + `@modelcontextprotocol/server`), D1, KV, Telegram Bot API. Vitest with `@cloudflare/vitest-plugin`.
+**Stack:** Cloudflare Workers, MCP via the Agents SDK (`agents/mcp/server` + `@modelcontextprotocol/server`), OAuth via `@cloudflare/workers-oauth-provider` (Google sign-in), D1, KV, Telegram Bot API. Vitest with `@cloudflare/vitest-plugin`.
 
 ## Non-negotiable rules
 
@@ -12,19 +12,20 @@ A personal voice assistant: the user talks to Claude in the Claude app's voice m
 - **The Gmail integration must NEVER have a send tool.** Search, read and create_draft only.
 - One tool per file in `src/tools/`, registered in `src/tools/index.ts`. Follow the `add-mcp-tool` skill.
 - External API calls live in `src/lib/`. They return typed results, never throw, and always use a timeout.
+- **Auth:** `/mcp` is OAuth-protected; only `ALLOWED_EMAIL` can sign in (checked at sign-in and on every request). Never add an unauthenticated route to tools. Tools get the signed-in user via `context.auth`; Google calls use `getGoogleAccessToken()` from `src/lib/google-auth.ts`. Never log tokens, codes or URLs containing them.
 
 ## Commands
 
-| Command              | Purpose                                                      |
-| -------------------- | ------------------------------------------------------------ |
-| `npm run dev`        | Local server at `http://localhost:8787/mcp`                  |
-| `npm test`           | Vitest in the Workers runtime                                |
-| `npm run type-check` | TypeScript for `src/` and `test/`                            |
-| `npm run lint`       | oxlint                                                       |
-| `npm run deploy`     | `wrangler deploy` (prefer `/deploy`, which checks first)     |
-| `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` after binding changes |
+| Command              | Purpose                                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `npm run dev`        | Local server at `http://localhost:8787/mcp`                                                                                 |
+| `npm test`           | Vitest in the Workers runtime                                                                                               |
+| `npm run type-check` | TypeScript for `src/` and `test/`                                                                                           |
+| `npm run lint`       | oxlint                                                                                                                      |
+| `npm run deploy`     | `wrangler deploy` (prefer `/deploy`, which checks first)                                                                    |
+| `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` after binding changes (move `.dev.vars` aside first so secrets aren't typed as vars) |
 
-Test new tools locally with MCP Inspector before deploying: `npx @modelcontextprotocol/inspector@latest`, then Streamable HTTP and `http://localhost:8787/mcp`.
+Test new tools locally with MCP Inspector before deploying: `npx @modelcontextprotocol/inspector@latest`, then Streamable HTTP and `http://localhost:8787/mcp`. Connecting opens Jarvis's consent page, then Google sign-in (`.dev.vars` needs the Google secrets and `MCP_RESOURCE=http://localhost:8787/mcp`).
 
 ## Keeping docs current
 

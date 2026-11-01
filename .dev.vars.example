@@ -5,3 +5,12 @@
 TELEGRAM_BOT_TOKEN=123456789:replace-with-your-bot-token
 # Your personal chat ID with the bot (see README for how to find it).
 TELEGRAM_CHAT_ID=replace-with-your-chat-id
+
+# Google Cloud OAuth client (type: Web application). See README "Google sign-in".
+GOOGLE_CLIENT_ID=replace-with-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=replace-with-client-secret
+# The only Google account allowed to sign in to Jarvis.
+ALLOWED_EMAIL=you@example.com
+
+# Local only (not a secret): overrides the production URL in wrangler.jsonc.
+MCP_RESOURCE=http://localhost:8787/mcp

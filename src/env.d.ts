@@ -5,11 +5,21 @@
 interface JarvisSecrets {
 	TELEGRAM_BOT_TOKEN: string;
 	TELEGRAM_CHAT_ID: string;
+	/** Google Cloud OAuth client (type: Web application). */
+	GOOGLE_CLIENT_ID: string;
+	GOOGLE_CLIENT_SECRET: string;
+	/** The only Google account allowed to sign in. */
+	ALLOWED_EMAIL: string;
+}
+
+interface JarvisBindings extends JarvisSecrets {
+	/** Injected at runtime by OAuthProvider for the sign-in handler. */
+	OAUTH_PROVIDER: import("@cloudflare/workers-oauth-provider").OAuthHelpers;
 }
 
 // The global Env (fetch handler argument) and Cloudflare.Env (`import { env } from
-// "cloudflare:workers"`) are separate interfaces, so both get the secrets.
-interface Env extends JarvisSecrets {}
+// "cloudflare:workers"`) are separate interfaces, so both get the extra bindings.
+interface Env extends JarvisBindings {}
 declare namespace Cloudflare {
-	interface Env extends JarvisSecrets {}
+	interface Env extends JarvisBindings {}
 }

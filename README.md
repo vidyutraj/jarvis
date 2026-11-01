@@ -21,11 +21,22 @@ npm run dev                      # http://localhost:8787/mcp
 
 For production, run `npx wrangler secret put TELEGRAM_BOT_TOKEN` and `npx wrangler secret put TELEGRAM_CHAT_ID`.
 
+### Google sign-in
+
+Jarvis is OAuth-protected: connecting (from Claude or MCP Inspector) shows a consent page, then Google sign-in. Only `ALLOWED_EMAIL` gets in.
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable the **Google Calendar API**.
+2. Set up the OAuth consent screen (External), add the scopes `calendar.calendarlist.readonly` and `calendar.events`, then **publish the app** ("In production"). Testing mode expires sign-ins every 7 days.
+3. Create an OAuth client (type **Web application**) with these authorized redirect URIs:
+    - `https://voice-assistant.<your-subdomain>.workers.dev/callback`
+    - `http://localhost:8787/callback`
+4. Put the client ID, client secret and your email in `.dev.vars` (see `.dev.vars.example`), and in production with `npx wrangler secret put GOOGLE_CLIENT_ID` (and `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAIL`).
+
+In the Claude app, add the connector with just the URL; leave the OAuth Client ID/Secret fields empty.
+
 ## Tools
 
 | Tool        | What it does                    |
 | ----------- | ------------------------------- |
 | `ping`      | Confirms the server is live     |
 | `save_note` | Sends a tidied note to Telegram |
-
-> **Security note:** until Phase 2 adds OAuth, the server has no authentication. Anyone with the URL can call its tools.

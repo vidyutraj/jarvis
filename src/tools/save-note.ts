@@ -39,7 +39,7 @@ export const saveNoteTool = defineTool({
 				"The tidied note text. Clear and concise; plain text with line breaks or '-' bullets.",
 			),
 	}),
-	handler: async ({ title, body }, env) => {
+	handler: async ({ title, body }, { env }) => {
 		const message = `<b>${escapeTelegramHtml(title)}</b>\n\n${escapeTelegramHtml(body)}`;
 		const result = await sendTelegramMessage(env, message);
 		if (!result.ok) {

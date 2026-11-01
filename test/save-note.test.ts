@@ -1,13 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
 import { NOTE_BODY_MAX_LENGTH, saveNoteTool } from "../src/tools/save-note";
-import { expectSpeakable, resultText, testEnv } from "./helpers";
-
-function telegramReply(body: unknown, status = 200): Response {
-	return new Response(JSON.stringify(body), {
-		status,
-		headers: { "Content-Type": "application/json" },
-	});
-}
+import { expectSpeakable, jsonResponse, resultText, testContext } from "./helpers";
 
 describe("save_note", () => {
 	let fetchSpy: MockInstance<typeof fetch>;
@@ -24,11 +17,11 @@ describe("save_note", () => {
 	});
 
 	it("sends the note to the configured chat and confirms", async () => {
-		fetchSpy.mockResolvedValue(telegramReply({ ok: true, result: {} }));
+		fetchSpy.mockResolvedValue(jsonResponse({ ok: true, result: {} }));
 
 		const result = await saveNoteTool.handler(
 			{ title: "Grocery app", body: "Shared list for the house" },
-			testEnv(),
+			testContext(),
 		);
 
 		expect(resultText(result)).toBe('Got it, I sent "Grocery app" to your Telegram.');
@@ -47,9 +40,12 @@ describe("save_note", () => {
 	});
 
 	it("escapes HTML so note text can't break Telegram formatting", async () => {
-		fetchSpy.mockResolvedValue(telegramReply({ ok: true }));
+		fetchSpy.mockResolvedValue(jsonResponse({ ok: true }));
 
-		await saveNoteTool.handler({ title: "a < b & c", body: "<i>not italic</i>" }, testEnv());
+		await saveNoteTool.handler(
+			{ title: "a < b & c", body: "<i>not italic</i>" },
+			testContext(),
+		);
 
 		const sent = JSON.parse(String(fetchSpy.mock.calls[0]![1]?.body));
 		expect(sent.text).toBe("<b>a &lt; b &amp; c</b>\n\n&lt;i&gt;not italic&lt;/i&gt;");
@@ -58,7 +54,7 @@ describe("save_note", () => {
 	it("says Telegram isn't set up when secrets are missing, without calling Telegram", async () => {
 		const result = await saveNoteTool.handler(
 			{ title: "Idea", body: "Something" },
-			testEnv({ TELEGRAM_BOT_TOKEN: "", TELEGRAM_CHAT_ID: "" }),
+			testContext({ TELEGRAM_BOT_TOKEN: "", TELEGRAM_CHAT_ID: "" }),
 		);
 
 		expect(resultText(result)).toBe("Telegram isn't set up yet, so I couldn't save that note.");
@@ -69,10 +65,13 @@ describe("save_note", () => {
 
 	it("reports a rejection when Telegram returns an error", async () => {
 		fetchSpy.mockResolvedValue(
-			telegramReply({ ok: false, description: "Bad Request: chat not found" }, 400),
+			jsonResponse({ ok: false, description: "Bad Request: chat not found" }, 400),
 		);
 
-		const result = await saveNoteTool.handler({ title: "Idea", body: "Something" }, testEnv());
+		const result = await saveNoteTool.handler(
+			{ title: "Idea", body: "Something" },
+			testContext(),
+		);
 
 		expect(resultText(result)).toBe("Telegram didn't accept that note, so it wasn't saved.");
 		expect(result.isError).toBe(true);
@@ -80,9 +79,12 @@ describe("save_note", () => {
 	});
 
 	it("treats a 200 response with ok:false as a rejection", async () => {
-		fetchSpy.mockResolvedValue(telegramReply({ ok: false, description: "odd" }));
+		fetchSpy.mockResolvedValue(jsonResponse({ ok: false, description: "odd" }));
 
-		const result = await saveNoteTool.handler({ title: "Idea", body: "Something" }, testEnv());
+		const result = await saveNoteTool.handler(
+			{ title: "Idea", body: "Something" },
+			testContext(),
+		);
 
 		expect(result.isError).toBe(true);
 	});
@@ -90,7 +92,10 @@ describe("save_note", () => {
 	it("reports Telegram as unreachable on a network failure", async () => {
 		fetchSpy.mockRejectedValue(new TypeError("Network connection lost"));
 
-		const result = await saveNoteTool.handler({ title: "Idea", body: "Something" }, testEnv());
+		const result = await saveNoteTool.handler(
+			{ title: "Idea", body: "Something" },
+			testContext(),
+		);
 
 		expect(resultText(result)).toBe(
 			"I couldn't reach Telegram just now. Try again in a moment.",
@@ -100,9 +105,9 @@ describe("save_note", () => {
 	});
 
 	it("never logs the bot token", async () => {
-		fetchSpy.mockResolvedValue(telegramReply({ ok: false, description: "Unauthorized" }, 401));
+		fetchSpy.mockResolvedValue(jsonResponse({ ok: false, description: "Unauthorized" }, 401));
 
-		await saveNoteTool.handler({ title: "Idea", body: "Something" }, testEnv());
+		await saveNoteTool.handler({ title: "Idea", body: "Something" }, testContext());
 
 		expect(errorSpy).toHaveBeenCalled();
 		const logged = errorSpy.mock.calls.flat().join(" ");

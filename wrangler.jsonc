@@ -21,7 +21,14 @@
 	// Only the main workers.dev URL is public. Per-version preview URLs stay off so old
 	// (e.g. pre-OAuth) versions can never be reached at their own addresses.
 	"workers_dev": true,
-	"preview_urls": false
+	"preview_urls": false,
+	// Stores OAuth clients, grants and tokens (props are encrypted by the OAuth library).
+	"kv_namespaces": [{ "binding": "OAUTH_KV", "id": "c7441925a2b9412d830bcca06a62c72e" }],
+	"vars": {
+		// Canonical MCP URL baked into every OAuth grant. Must match the connector URL exactly.
+		// Overridden locally in .dev.vars with http://localhost:8787/mcp.
+		"MCP_RESOURCE": "https://voice-assistant.vidyut-rajagopal2006.workers.dev/mcp"
+	}
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

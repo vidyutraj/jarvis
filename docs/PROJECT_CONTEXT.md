@@ -28,7 +28,7 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 
 1. **Voice notes → Telegram.** I ramble, Claude tidies it into a note, it's sent to me on Telegram. For capturing ideas; no time attached.
 2. **Calendar events.** Google Calendar API. I have multiple calendars (e.g. Work, Personal), so the tool takes a calendar name mapped to calendar IDs, with a default. Always give Claude the current date and my time zone so "next Thursday" resolves correctly.
-3. **Reminders.** Must land in the **Apple Reminders app** on my iPhone (not Google Tasks). Apple has no web API. First, test whether the Claude iOS app's built-in Reminders access is enough. Fallback: an iOS Shortcut that polls this server and adds reminders. Reminders are for "do this at a specific time"; notes are for "remember this idea."
+3. **Reminders.** Must land in the **Apple Reminders app** on my iPhone (not Google Tasks). **Resolved:** the Claude iOS app's built-in Reminders access works fully, so no custom reminders tool is needed. (The iOS Shortcut fallback is no longer needed.) Reminders are for "do this at a specific time"; notes are for "remember this idea."
 4. **Gmail drafts.** Flow: "What was the last email from X?" → Claude reads/summarises → I say my reply → saved as a draft in the same thread. Optional Telegram ping: "draft ready." Also useful for finding flight details (Expedia/Frontier confirmations are in my inbox).
 5. **Expense tracking.** Start with voice logging ("spent $12 on lunch") into D1 or a Google Sheet. Weekly/monthly Telegram reports, on-demand questions ("food spend this week?"), budget alerts.
 6. **Whoop.** Official Whoop developer API (free) plus webhooks pushing sleep, recovery, strain and workouts into D1. Mostly on-demand questions. Once the data is stored, any question about it is possible.
@@ -49,7 +49,16 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
    - [x] Deploy (2026-11-01, `https://voice-assistant.vidyut-rajagopal2006.workers.dev/mcp`; live `ping` verified)
    - [x] Connect to the Claude app as a custom connector (no auth; both tools set to "Always allow" for smooth voice use)
    - [x] Test by voice
-2. **Calendar and reminders:** switch to an OAuth-protected MCP server first (the authless template is public), then Google OAuth and `create_event`. Test Claude app's built-in Reminders.
+2. **Calendar and reminders** *(in progress)*
+   - [x] OAuth-protected MCP server with Google sign-in, single allowed account (code and tests done)
+   - [x] Google Cloud project, Calendar API, OAuth client (Web application), consent screen scopes and branding
+   - [ ] Confirm consent screen is published "In production"
+   - [x] Set Google secrets locally and in production
+   - [x] Deploy the OAuth version (2026-11-01)
+   - [ ] Re-add the connector in Claude, sign in, test by voice
+   - [ ] List calendars, choose names and a default
+   - [ ] `create_event` tool
+   - [x] ~~Test Claude app's built-in Reminders~~ (done: built-in works, nothing to build)
 3. **Expenses:** D1 schema, `log_expense`, `query_expenses`, weekly report cron, budget alerts.
 4. **Gmail:** search, read, create_draft. No send.
 5. **Whoop:** OAuth, webhook endpoint, D1 storage, `query_health`.
@@ -75,14 +84,20 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 - **2026-11-01: No extra protection on the authless endpoint in Phase 1.** Accepted risk: anyone with the URL could call tools (e.g. spam Telegram via `save_note`). Deploy only for testing and move to OAuth at the start of Phase 2.
 - **2026-11-01: Preview URLs disabled** (`preview_urls: false`, `workers_dev: true` in `wrangler.jsonc`). Only the main workers.dev URL serves the Worker, so once OAuth lands, old unauthenticated versions can't be reached at per-version preview addresses.
 - **2026-11-01: `ping` stays through Phase 2** as a connection check (the OAuth switch is when connections break). Later, replace it with a `status` tool that reports which integrations are configured or need reconnecting, without sending anything.
+- **2026-11-01: Reminders use the Claude iOS app's built-in Apple Reminders access.** Tested by voice and it works completely, so Jarvis won't have a reminders tool. `save_note` remains for untimed ideas.
+- **2026-11-01: Time zone is Eastern (`America/New_York`).** Use the IANA name, not a fixed EST offset, so daylight saving (EDT) is handled automatically. Calendar tools resolve relative dates ("next Thursday at 7") in this zone.
+- **2026-11-01: OAuth design.** `@cloudflare/workers-oauth-provider` 1.2.4 (single-Worker `OAuthProvider`) protects `/mcp`; Claude connects with dynamic client registration, so the connector's OAuth Client ID/Secret fields stay empty. Sign-in goes through Google using the library's `beginConsent`/`beginUpstream` helpers (browser-bound single-use cookies, state, upstream PKCE).
+- **2026-11-01: Single allowed account.** Only `ALLOWED_EMAIL` (verified by Google) can sign in; checked before any grant is issued and again on every request. Fails closed if unset.
+- **2026-11-01: Google tokens live in the grant's props** (encrypted by the library), not a separate KV entry. Jarvis's access token expires 5 minutes before Google's so Claude's refresh also refreshes Google; tools fall back to a per-call refresh. Revoked Google access → grant revoked → Claude asks to sign in again. Grants stay alive while used at least every 90 days.
+- **2026-11-01: Google scopes** are `openid email` (identity only; no name or photo) + `calendar.calendarlist.readonly` (list calendars) + `calendar.events` (create/edit events). No access to calendar settings, sharing or deletion of calendars. Both calendar scopes are requested at first sign-in so Phase 2's calendar tool needs no second sign-in.
+- **2026-11-01: Google consent screen published "In production" without verification** (personal use, under 100 users). Testing mode would expire refresh tokens every 7 days. Trade-off: Google shows an "unverified app" warning at sign-in, which is expected for a personal app.
+- **2026-11-01: Public home page and privacy policy** are served by the Worker at `/` and `/privacy` (static, no user data), because Google requires both links to publish the consent screen. No logo is uploaded, since a logo forces Google verification.
 
 ## Open risks
 
-- The server is public and unauthenticated until Phase 2 (see decision log).
+- ~~The server is public and unauthenticated until Phase 2.~~ Resolved once the OAuth version is deployed.
 
 ## Open questions
 
 - Is the Barclays account UK or US?
-- My Google calendar names and IDs (needed in Phase 2)
-- My time zone setting for the calendar and reminder tools
-- Does the Claude iOS app's built-in Reminders access cover my needs?
+- My Google calendar names and default (I can list them once Google sign-in works)

@@ -164,16 +164,19 @@ export async function syncPage(
 		env.DB.prepare(
 			`UPDATE bank_items SET sync_cursor = ?, sync_run_id = NULL, sync_start_cursor = NULL,
 				sync_next_cursor = NULL, sync_started_at = NULL, last_synced_at = ?,
-				historical_complete = MAX(historical_complete, ?)
+				historical_complete = MAX(historical_complete, CASE WHEN ? = 1
+					AND EXISTS (SELECT 1 FROM bank_transactions WHERE item_id = ?) THEN 1 ELSE 0 END)
 			WHERE item_id = ? AND sync_run_id = ? AND sync_step = ?
-			RETURNING sync_again`,
-		).bind(page.next_cursor, now.toISOString(), historicalNow, ...guard),
+			RETURNING sync_again, historical_complete`,
+		).bind(page.next_cursor, now.toISOString(), historicalNow, itemId, ...guard),
 	);
-	const results = await env.DB.batch<{ sync_again: number }>(statements);
+	const results = await env.DB.batch<{ sync_again: number; historical_complete: number }>(statements);
 	const committed = results[results.length - 1]?.results[0];
 	if (!committed) return; // lost the run to a newer one; nothing was applied
 
-	if (historicalNow && !item.historical_complete) {
+	// "Complete" only counts once transactions are actually stored: Plaid can report
+	// HISTORICAL_UPDATE_COMPLETE on a sync that returns nothing yet (seen in Sandbox).
+	if (committed.historical_complete && !item.historical_complete) {
 		await notifyHistoryImported(env, itemId);
 	}
 	if (committed.sync_again) {

@@ -12,7 +12,9 @@
 		"cf-typegen": "wrangler types --strict-vars false",
 		"type-check": "tsc --noEmit && tsc --noEmit -p test",
 		"test": "vitest run",
-		"lint": "oxlint"
+		"lint": "oxlint",
+		"test:sandbox": "vitest run --config vitest.sandbox.config.ts plaid.sandbox",
+		"test:hosted-link": "vitest run --config vitest.sandbox.config.ts --silent=false hosted-link.interactive"
 	},
 	"dependencies": {
 		"@cloudflare/workers-oauth-provider": "^1.2.4",

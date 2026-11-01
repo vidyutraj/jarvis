@@ -75,7 +75,10 @@ export async function completeLink(env: LinkEnv, linkTokenHash: string, now = ne
 		return;
 	}
 
-	const finished = (result.data.link_sessions ?? []).filter((s) => s.finished_at);
+	// A session counts as done once it has a finish time, any added Item, or an exit record.
+	const finished = (result.data.link_sessions ?? []).filter(
+		(s) => s.finished_at || (s.results?.item_add_results?.length ?? 0) > 0 || s.exit,
+	);
 	const linkSessionId = finished[finished.length - 1]?.link_session_id ?? null;
 	if (linkSessionId) console.log(`Hosted Link session finished: link_session_id=${linkSessionId}`);
 	if (finished.length === 0) {
@@ -116,7 +119,8 @@ async function completeUpdateMode(env: LinkEnv, itemId: string): Promise<void> {
 	}
 }
 
-async function addItem(env: LinkEnv, publicToken: string, hintedInstitutionId: string | null): Promise<void> {
+/** Exported for the Sandbox end-to-end test (which creates public tokens without Link). */
+export async function addItem(env: LinkEnv, publicToken: string, hintedInstitutionId: string | null): Promise<void> {
 	const exchanged = await exchangePublicToken(env, publicToken);
 	if (!exchanged.ok) {
 		if (isTransientPlaidFailure(exchanged)) throw new RetryLater("Plaid token exchange unavailable.");

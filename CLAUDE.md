@@ -23,6 +23,8 @@ A personal voice assistant: the user talks to Claude in the Claude app's voice m
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | `npm run dev`        | Local server at `http://localhost:8787/mcp`                                                                                 |
 | `npm test`           | Vitest in the Workers runtime                                                                                               |
+| `npm run test:sandbox` | Plaid Sandbox end-to-end tests (real Sandbox keys from `.dev.vars`) |
+| `npm run test:hosted-link` | Interactive: sends a Sandbox Hosted Link to Telegram and waits for you to finish it |
 | `npm run type-check` | TypeScript for `src/` and `test/`                                                                                           |
 | `npm run lint`       | oxlint                                                                                                                      |
 | `npm run deploy`     | `wrangler deploy` (prefer `/deploy`, which checks first)                                                                    |

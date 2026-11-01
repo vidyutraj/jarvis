@@ -108,6 +108,26 @@ describe("Hosted Link completion", () => {
 		expect(api.telegram[0]).toContain("already connected");
 	});
 
+	it("treats a session with results as finished even without finished_at", async () => {
+		const hash = await seedSession("link-sandbox-1");
+		const { env: e } = bankEnv();
+		mockApis({
+			"/link/token/get": () =>
+				jsonResponse({
+					link_token: "link-sandbox-1",
+					link_sessions: [
+						{ link_session_id: "ls-9", results: { item_add_results: [{ public_token: "public-9", institution: { institution_id: "ins_x" } }] } },
+					],
+				}),
+			"/item/public_token/exchange": () => jsonResponse({ access_token: "access-9", item_id: "item-9" }),
+			"/accounts/get": accounts("item-9", "ins_x"),
+			"/institutions/get_by_id": () => jsonResponse({ institution: { institution_id: "ins_x", name: "X Bank" } }),
+		});
+		await completeLink(e, hash);
+		expect(await getItem(env.DB, "item-9")).not.toBeNull();
+		expect((await sessionStatus(hash)).status).toBe("completed");
+	});
+
 	it("leaves an unfinished session pending, and expires it after its lifetime", async () => {
 		const open = await seedSession("link-open");
 		const old = await seedSession("link-old", null, "2020-01-01T00:00:00Z");

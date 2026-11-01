@@ -27,12 +27,12 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
 
 | Task | Why it matters | Where | State |
 |------|----------------|-------|-------|
-| Put Sandbox keys in `.dev.vars` (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox`) yourself | Local testing; keys must never be pasted into chat or written by the agent (GUIDE-021) | https://dashboard.plaid.com/developers/keys | needs_human |
+| Put Sandbox keys in `.dev.vars` (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV=sandbox`) yourself | Local testing; keys must never be pasted into chat or written by the agent (GUIDE-021) | https://dashboard.plaid.com/developers/keys | verified (2026-11-01: Sandbox requests succeed) |
 | Production secrets: `npx wrangler secret put PLAID_CLIENT_ID` / `PLAID_SECRET` | Production calls | terminal | needs_human |
 | Confirm company profile is complete and the latest Plaid MSA is accepted | PNC is silently absent from production Link without the latest MSA (OAUTH-008, TASK-006) | https://dashboard.plaid.com/settings/company/profile | cannot_verify |
 | Data Transparency Messaging / Link customization "default" set up for production | INVALID_LINK_CUSTOMIZATION otherwise (PITFALL-002) | https://dashboard.plaid.com/link | cannot_verify |
 | Production access + Transactions in US production | Required for real banks | dashboard_get_state products | verified (2026-11-01: production authorized; transactions in US production) |
-| Redirect URI | Not needed: Hosted Link hosts the OAuth redirect; empty list is expected | https://dashboard.plaid.com/developers/api | not_applicable |
+| Redirect URI | Not needed: Hosted Link hosts the OAuth redirect (verified 2026-11-01 with Platypus OAuth Bank in Sandbox) | https://dashboard.plaid.com/developers/api | not_applicable |
 | Dashboard webhooks | Item/product webhooks are set per Link token (`webhook` field), not in the Dashboard (TASK-003) | — | not_applicable |
 | Sign in to PNC and Barclays in Hosted Link | Only the owner can enter bank credentials | Telegram link from `jarvis_connect_bank` | needs_human |
 | Free Trial: 10 connections | Each re-link of the same bank uses a connection; the connect tool refuses duplicates (ITEM-001/011) | — | noted |
@@ -50,7 +50,7 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
 - [x] Cron: hourly link-session reconcile; daily catch-up sync (WEBHOOK-007)
 - [x] `jarvis_spending` voice tool; `jarvis_spending_page` signed link → `/spending` page
 - [x] Tests (Plaid mocked; 35 bank tests), docs
-- [ ] End-to-end Sandbox run (needs sandbox keys), incl. Platypus OAuth Bank via Hosted Link and user_transactions_dynamic
+- [x] End-to-end Sandbox run: `npm run test:sandbox` (2 personas, duplicate, reconnect) and `npm run test:hosted-link` (owner completed Platypus OAuth Bank via the Telegram Hosted Link)
 - [ ] Production: create D1 + Queue, remote migrations, secrets, deploy, link PNC and Barclays
 
 ## Acceptance
@@ -61,6 +61,11 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
   - CHECK-015: goal example verified on synthetic data only; second persona
     (user_transactions_dynamic) pending Sandbox.
   - CHECK-007 not_applicable (Hosted Link hosts OAuth); to be confirmed with Platypus OAuth Bank in Sandbox.
+
+- Round 2 (2026-11-01): Sandbox end to end passed (`test:sandbox` 6/6, `test:hosted-link` 1/1).
+  Persona 1 user_transactions_dynamic @ First Platypus: 311 transactions, 15 categories, 17 pending;
+  "Spending for November 2026: $1,603 total." Persona 2 user_good @ First Gingham CU: 16 transactions,
+  9 categories. Remaining: CHECK-009 (production human tasks).
 
 ## Maintenance
 
@@ -115,6 +120,11 @@ the code as it was verified — later changes invalidate it.
   holding every page in one invocation's memory.
 - Agent: personal_finance_category pinned to v2 (TXN-006); spending excludes transfers, loan/card
   payments and income so a PNC → Barclays card payment isn't counted twice.
+
+- Agent (Sandbox finding): Plaid can report HISTORICAL_UPDATE_COMPLETE on a sync that returns no
+  transactions yet, so "history imported" requires complete AND at least one stored transaction.
+- Agent (Sandbox finding): a Hosted Link session counts as finished if it has finished_at, any
+  item_add_results, or an exit record.
 
 ## Open questions
 

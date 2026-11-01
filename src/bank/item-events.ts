@@ -56,7 +56,7 @@ export async function notifyHistoryImported(env: EventEnv, itemId: string): Prom
 	await notify(
 		env,
 		`<b>Bank history imported</b>\n\n${escapeTelegramHtml(itemDisplayName(item))}: ` +
-			`${row?.n ?? 0} transactions are in Jarvis. Ask Jarvis about your spending any time.`,
+			`${row?.n ?? 0} ${row?.n === 1 ? "transaction is" : "transactions are"} in Jarvis. Ask Jarvis about your spending any time.`,
 	);
 }
 

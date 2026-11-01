@@ -118,6 +118,24 @@ describe("paged transactions sync", () => {
 		expect((await getItem(env.DB, "item-1"))?.sync_cursor).toBe("c9");
 	});
 
+	it("doesn't call history imported while Plaid says complete but nothing has arrived", async () => {
+		await seedItem({ historical: false });
+		const { env: e, sent } = bankEnv();
+		const api = mockApis({
+			"/transactions/sync": [page([], { next: "c1", hasMore: false }), page([tx("t1")], { next: "c2", hasMore: false })],
+		});
+
+		sent.push({ kind: "sync_start", itemId: "item-1" });
+		await drain(e, sent);
+		expect((await getItem(env.DB, "item-1"))?.historical_complete).toBe(0);
+		expect(api.telegram).toEqual([]);
+
+		sent.push({ kind: "sync_start", itemId: "item-1" });
+		await drain(e, sent);
+		expect((await getItem(env.DB, "item-1"))?.historical_complete).toBe(1);
+		expect(api.telegram[0]).toContain("1 transaction is in Jarvis");
+	});
+
 	it("ignores duplicate or stale page deliveries", async () => {
 		await seedItem();
 		const { env: e, sent } = bankEnv();

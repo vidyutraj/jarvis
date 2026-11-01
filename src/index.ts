@@ -5,6 +5,9 @@ import { env as workerEnv } from "cloudflare:workers";
 import { isAllowedEmail } from "./auth/allowlist";
 import { googleAuthHandler } from "./auth/google-handler";
 import { isAuthProps } from "./auth/props";
+import { handleBankCron, handleBankJobs } from "./bank/consumer";
+import { handleSpendingRoute } from "./bank/spending-page";
+import { handlePlaidWebhook, PLAID_WEBHOOK_PATH } from "./bank/webhook";
 import { handleTokenExchange } from "./auth/token-exchange";
 import { sitePage } from "./site";
 import { tools, type ToolContext } from "./tools";
@@ -42,7 +45,7 @@ const defaultHandler = {
 	},
 } satisfies ExportedHandler<Env>;
 
-export default new OAuthProvider<Env>({
+const oauthProvider = new OAuthProvider<Env>({
 	apiRoute: "/mcp",
 	apiHandler: mcpApiHandler,
 	defaultHandler,
@@ -56,3 +59,24 @@ export default new OAuthProvider<Env>({
 	refreshTokenIdleTTL: 90 * SECONDS_PER_DAY,
 	tokenExchangeCallback: handleTokenExchange,
 });
+
+/**
+ * Bank routes sit outside the OAuth layer but are not open: the Plaid webhook
+ * only acts on a verified Plaid signature, and spending data needs a signed,
+ * short-lived token. Everything else (including /mcp) goes through OAuthProvider.
+ */
+export default {
+	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+		const { pathname } = new URL(request.url);
+		if (pathname === PLAID_WEBHOOK_PATH) return handlePlaidWebhook(request, env);
+		const spending = await handleSpendingRoute(request, env);
+		if (spending) return spending;
+		return oauthProvider.fetch(request, env, ctx);
+	},
+	queue(batch: MessageBatch<unknown>, env: Env): Promise<void> {
+		return handleBankJobs(batch, env);
+	},
+	scheduled(controller: ScheduledController, env: Env): Promise<void> {
+		return handleBankCron(controller.cron, env);
+	},
+} satisfies ExportedHandler<Env>;

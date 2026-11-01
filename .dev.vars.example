@@ -14,3 +14,12 @@ ALLOWED_EMAIL=you@example.com
 
 # Local only (not a secret): overrides the production URL in wrangler.jsonc.
 MCP_RESOURCE=http://localhost:8787/mcp
+
+# Plaid (bank transactions). Dashboard → Developers → Keys. Use the Sandbox secret locally.
+PLAID_CLIENT_ID=replace-with-plaid-client-id
+PLAID_SECRET=replace-with-plaid-sandbox-secret
+# Local only (not a secret): overrides "production" in wrangler.jsonc.
+PLAID_ENV=sandbox
+# 32+ random bytes, base64: encrypts stored bank tokens and signs spending-page links.
+# Generate with: openssl rand -base64 32   (production: npx wrangler secret put JARVIS_SECRET_KEY)
+JARVIS_SECRET_KEY=replace-with-output-of-openssl-rand-base64-32

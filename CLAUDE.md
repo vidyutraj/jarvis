@@ -1,6 +1,6 @@
 # Jarvis
 
-A personal voice assistant: the user talks to Claude in the Claude app's voice mode, and this repo is a remote MCP server that gives Claude custom tools (notes, calendar, expenses, Gmail drafts, health data). Background, decisions and the roadmap live in `docs/PROJECT_CONTEXT.md`. Read it before planning new work.
+A personal voice assistant: the user talks to Claude in the Claude app's voice mode, and this repo is a remote MCP server that gives Claude custom tools (notes, calendar, expenses, bank transactions, Gmail drafts). Background, decisions and the roadmap live in `docs/PROJECT_CONTEXT.md`. Read it before planning new work.
 
 **Stack:** Cloudflare Workers, MCP via the Agents SDK (`agents/mcp/server` + `@modelcontextprotocol/server`), OAuth via `@cloudflare/workers-oauth-provider` (Google sign-in), D1, KV, Telegram Bot API. Vitest with `@cloudflare/vitest-plugin`.
 
@@ -14,6 +14,7 @@ A personal voice assistant: the user talks to Claude in the Claude app's voice m
 - **Destructive tools** (e.g. `jarvis_delete_event`) set `destructiveHint: true` and their description tells Claude to confirm the exact item with the user before calling. Prefer edits over delete-and-recreate.
 - One tool per file in `src/tools/`, registered in `src/tools/index.ts`. Follow the `add-mcp-tool` skill.
 - External API calls live in `src/lib/`. They return typed results, never throw, and always use a timeout.
+- **Bank (Plaid):** follow `PLAID_PLAN.md`; consult the Plaid MCP's `build_guidance` before changing Plaid code and re-run `build_check_acceptance` after. Access/link tokens are encrypted in D1 and never logged (log `request_id` / `link_session_id` only). `/plaid/webhook` must verify Plaid's signature before doing anything; bank work runs as small Queue jobs (free plan: 10 ms CPU per invocation).
 - **Auth:** `/mcp` is OAuth-protected; only `ALLOWED_EMAIL` can sign in (checked at sign-in and on every request). Never add an unauthenticated route to tools. Tools get the signed-in user via `context.auth`; Google calls use `getGoogleAccessToken()` from `src/lib/google-auth.ts`. Never log tokens, codes or URLs containing them.
 
 ## Commands
@@ -26,6 +27,7 @@ A personal voice assistant: the user talks to Claude in the Claude app's voice m
 | `npm run lint`       | oxlint                                                                                                                      |
 | `npm run deploy`     | `wrangler deploy` (prefer `/deploy`, which checks first)                                                                    |
 | `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` after binding changes (move `.dev.vars` aside first so secrets aren't typed as vars) |
+| `npx wrangler d1 migrations apply jarvis --local` (or `--remote`) | Apply D1 migrations in `migrations/` |
 
 Test new tools locally with MCP Inspector before deploying: `npx @modelcontextprotocol/inspector@latest`, then Streamable HTTP and `http://localhost:8787/mcp`. Connecting opens Jarvis's consent page, then Google sign-in (`.dev.vars` needs the Google secrets and `MCP_RESOURCE=http://localhost:8787/mcp`).
 

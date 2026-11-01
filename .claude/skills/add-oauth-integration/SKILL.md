@@ -1,6 +1,6 @@
 ---
 name: add-oauth-integration
-description: How Jarvis's OAuth works (Google sign-in protecting the MCP server, Google tokens in the grant, refresh) and the pattern for adding a Google API tool or a second OAuth provider such as Whoop. Use when adding a tool that calls Google, changing scopes, or adding another account integration.
+description: How Jarvis's OAuth works (Google sign-in protecting the MCP server, Google tokens in the grant, refresh) and the pattern for adding a Google API tool or a second account provider such as a bank feed. Use when adding a tool that calls Google, changing scopes, or adding another account integration.
 ---
 
 # OAuth in Jarvis
@@ -40,7 +40,7 @@ Before changing auth, re-read `@cloudflare/workers-oauth-provider`'s docs in `no
 - Existing grants don't have new scopes. The user must remove the connector in Claude, add it again and sign in, so mention this when shipping.
 - New scopes may also need adding on the Google Cloud consent screen.
 
-## Adding a second provider (e.g. Whoop, Phase 5)
+## Adding a second provider (e.g. a bank feed, Phase 5)
 
 - Jarvis's login stays Google. Connect the other provider separately rather than as a second sign-in:
     - Routes `/connect/<provider>` and `/connect/<provider>/callback`. These must only be reachable by the signed-in owner, so require a valid Jarvis session or a short-lived signed link a tool hands out.
@@ -48,7 +48,7 @@ Before changing auth, re-read `@cloudflare/workers-oauth-provider`'s docs in `no
     - Use a one-time `state` with a TTL.
     - Use PKCE if the provider supports it.
 - Refresh pattern: `getAccessToken` returns the stored token if it's valid for more than 60 seconds. Otherwise it refreshes, saves the result (keeping the old refresh token if none is returned), and on `invalid_grant` returns `needs_reconnect`.
-- Webhooks (Whoop) must verify the provider's signature before trusting the payload.
+- Webhooks (e.g. bank transaction updates) must verify the provider's signature before trusting the payload.
 
 ## Security checklist
 

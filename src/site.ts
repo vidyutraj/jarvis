@@ -7,7 +7,7 @@ import { documentPage } from "./auth/pages";
 const HOME_TITLE = "Jarvis";
 const HOME_TEXT =
 	"Jarvis is a private, single-user voice assistant. It connects Claude to its owner's own tools " +
-	"(notes, calendar) and can only be used by the owner's Google account.";
+	"(notes, calendar, bank transactions) and can only be used by the owner's Google account.";
 
 const PRIVACY_TITLE = "Jarvis privacy policy";
 const PRIVACY_INTRO = "Last updated November 1, 2026.";
@@ -25,6 +25,10 @@ const PRIVACY_SECTIONS: (readonly [heading: string, text: string])[] = [
 		"Notes you ask Jarvis to save are sent to the owner's own Telegram chat. Jarvis does not keep a copy.",
 	],
 	[
+		"Bank data",
+		"If the owner connects a bank through Plaid, Jarvis stores that bank's account names and transactions (up to two years) to answer spending questions. Jarvis never sees bank passwords; sign-in happens on Plaid's and the bank's own pages. Bank access tokens are stored encrypted.",
+	],
+	[
 		"Storage and security",
 		"Sign-in tokens are stored encrypted on Cloudflare and are never logged. Jarvis does not sell, share or transfer your data to anyone, and does not use it for advertising or to train AI models.",
 	],
@@ -34,7 +38,7 @@ const PRIVACY_SECTIONS: (readonly [heading: string, text: string])[] = [
 	],
 	[
 		"Revoking access",
-		"Remove Jarvis at myaccount.google.com/permissions, or disconnect it in Claude's settings. Revoking access stops Jarvis from reaching your Google data immediately.",
+		"Remove Jarvis at myaccount.google.com/permissions, or disconnect it in Claude's settings. Revoking access stops Jarvis from reaching your Google data immediately. Bank access can be revoked at my.plaid.com or in your bank's settings.",
 	],
 ];
 

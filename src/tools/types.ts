@@ -1,4 +1,4 @@
-import type { CallToolResult, McpServer } from "@modelcontextprotocol/server";
+import type { CallToolResult, McpServer, ToolAnnotations } from "@modelcontextprotocol/server";
 import type { z } from "zod";
 import type { AuthProps } from "../auth/props";
 
@@ -13,8 +13,13 @@ export interface ToolContext {
 export interface ToolDefinition<Schema extends z.ZodObject> {
 	/** snake_case name Claude sees. */
 	name: string;
-	/** Tells Claude exactly when to use the tool and how to prepare its input. */
-	description: string;
+	/**
+	 * Tells Claude exactly when to use the tool and how to prepare its input.
+	 * A function is evaluated per request, e.g. to include today's date.
+	 */
+	description: string | ((context: ToolContext) => string);
+	/** Hints for clients, e.g. { readOnlyHint: true } for tools that only read. */
+	annotations?: ToolAnnotations;
 	inputSchema: Schema;
 	/** Must resolve to a short, speakable result (see lib/respond.ts). Should not throw. */
 	handler: (args: z.output<Schema>, context: ToolContext) => Promise<CallToolResult>;
@@ -40,7 +45,14 @@ export function defineTool<Schema extends z.ZodObject>(
 			const inputSchema: z.ZodObject = definition.inputSchema;
 			server.registerTool(
 				definition.name,
-				{ description: definition.description, inputSchema },
+				{
+					description:
+						typeof definition.description === "function"
+							? definition.description(context)
+							: definition.description,
+					inputSchema,
+					...(definition.annotations ? { annotations: definition.annotations } : {}),
+				},
 				(args) => definition.handler(args as z.output<Schema>, context),
 			);
 		},

@@ -7,5 +7,6 @@ export const pingTool = defineTool({
 	description:
 		"Check that the Jarvis server is reachable. Use only when the user asks whether the server, connection or Jarvis is working.",
 	inputSchema: z.object({}),
+	annotations: { readOnlyHint: true },
 	handler: async () => speak("Pong! Your server is live."),
 });

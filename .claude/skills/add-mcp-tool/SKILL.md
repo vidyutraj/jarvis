@@ -21,7 +21,7 @@ export const exampleTool = defineTool({
 	inputSchema: z.object({
 		field: z.string().trim().min(1).max(200).describe("What this is, with an example."),
 	}),
-	handler: async ({ field }, env) => {
+	handler: async ({ field }, { env, auth }) => {
 		const result = await someLibCall(env, field); // returns { ok: true } | { ok: false, reason }
 		if (!result.ok) return speakError("One short sentence saying what didn't happen.");
 		return speak("One short sentence confirming what happened.");
@@ -33,6 +33,8 @@ export const exampleTool = defineTool({
 
 - **Description:** be specific. Say when to use the tool, how it differs from similar tools, and how to clean up spoken input before calling. Claude chooses tools from this text alone.
 - **Schema:** use `z.object`. Give every field `.describe()` and sensible limits (`.min`, `.max`, `.trim`, enums). Never accept unbounded strings.
+- **Dynamic descriptions:** `description` can be a function of the `ToolContext`, evaluated per request (e.g. to include today's date, see `dateContext()` in `src/tools/calendar-common.ts`).
+- **Annotations:** set `annotations: { readOnlyHint: true }` on tools that only read, so Claude groups them sensibly.
 - **Replies:** use only `speak()` and `speakError()`. One or two short sentences that sound natural spoken aloud: no markdown, IDs, URLs, stack traces or raw API errors.
 - **External calls:** put them in `src/lib/<service>.ts`. They return a typed result union and never throw. Also:
     - Use `AbortSignal.timeout(...)` on every fetch.
@@ -49,7 +51,7 @@ Add it to the `tools` array in `src/tools/index.ts`.
 
 ## 3. Test it in `test/<kebab-name>.test.ts`
 
-- Call `tool.handler(args, testEnv())` directly (helpers are in `test/helpers.ts`).
+- Call `tool.handler(args, testContext())` directly (helpers are in `test/helpers.ts`). `context.auth` is the signed-in user (`testAuth()` in tests).
 - Mock outbound calls with `vi.spyOn(globalThis, "fetch")`. Never hit real APIs.
 - Cover success and every failure reason. Use `expectSpeakable(result)` on each reply.
 - Add test-only fake secrets to `vitest.config.ts` under `miniflare.bindings`.

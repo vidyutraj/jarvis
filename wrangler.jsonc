@@ -27,7 +27,15 @@
 	"vars": {
 		// Canonical MCP URL baked into every OAuth grant. Must match the connector URL exactly.
 		// Overridden locally in .dev.vars with http://localhost:8787/mcp.
-		"MCP_RESOURCE": "https://voice-assistant.vidyut-rajagopal2006.workers.dev/mcp"
+		"MCP_RESOURCE": "https://voice-assistant.vidyut-rajagopal2006.workers.dev/mcp",
+		// Calendar used when the user doesn't name one (matched by name, case-insensitive).
+		"DEFAULT_CALENDAR": "Daily Life",
+		// IANA zone, so daylight saving is handled automatically.
+		"TIME_ZONE": "America/New_York",
+		// Spoken nicknames → calendar names (for words speech-to-text gets wrong).
+		"CALENDAR_ALIASES": { "sock": "SOC" },
+		// Timed events added to these calendars automatically get a Google Meet link.
+		"MEET_CALENDARS": ["Waresport"]
 	}
 	/**
 	 * Smart Placement

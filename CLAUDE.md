@@ -6,10 +6,12 @@ A personal voice assistant: the user talks to Claude in the Claude app's voice m
 
 ## Non-negotiable rules
 
-- **Spoken replies:** every tool result is read aloud. Return one or two short sentences that sound natural spoken, using `speak()` / `speakError()` from `src/lib/respond.ts`. No markdown, IDs, URLs or raw errors.
+- **Spoken replies:** every tool result is read aloud. Return one or two short sentences that sound natural spoken, using `speak()` / `speakError()` from `src/lib/respond.ts`. No markdown, IDs, URLs or raw errors. Read tools (e.g. calendar lookups) may return a compact plain-text list that Claude summarises; confirmations and errors stay short.
+- **Calendar:** tools are prefixed `jarvis_` and their descriptions tell Claude to use them instead of the phone's built-in calendar. Times are wall-clock in `TIME_ZONE` (wrangler var); write tools read back the exact date and time.
 - **Tool descriptions** are clear and specific: what the tool does, exactly when to use it, and how to prepare the input.
 - **Secrets** come only from `wrangler secret put` (production) or `.dev.vars` (local, gitignored). Never put them in code, tests, logs or error messages.
 - **The Gmail integration must NEVER have a send tool.** Search, read and create_draft only.
+- **Destructive tools** (e.g. `jarvis_delete_event`) set `destructiveHint: true` and their description tells Claude to confirm the exact item with the user before calling. Prefer edits over delete-and-recreate.
 - One tool per file in `src/tools/`, registered in `src/tools/index.ts`. Follow the `add-mcp-tool` skill.
 - External API calls live in `src/lib/`. They return typed results, never throw, and always use a timeout.
 - **Auth:** `/mcp` is OAuth-protected; only `ALLOWED_EMAIL` can sign in (checked at sign-in and on every request). Never add an unauthenticated route to tools. Tools get the signed-in user via `context.auth`; Google calls use `getGoogleAccessToken()` from `src/lib/google-auth.ts`. Never log tokens, codes or URLs containing them.

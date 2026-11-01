@@ -39,6 +39,8 @@ export const saveNoteTool = defineTool({
 				"The tidied note text. Clear and concise; plain text with line breaks or '-' bullets.",
 			),
 	}),
+	// Sends a message to the owner only; nothing is changed or deleted.
+	annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
 	handler: async ({ title, body }, { env }) => {
 		const message = `<b>${escapeTelegramHtml(title)}</b>\n\n${escapeTelegramHtml(body)}`;
 		const result = await sendTelegramMessage(env, message);

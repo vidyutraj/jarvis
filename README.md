@@ -36,7 +36,12 @@ In the Claude app, add the connector with just the URL; leave the OAuth Client I
 
 ## Tools
 
-| Tool        | What it does                    |
-| ----------- | ------------------------------- |
-| `ping`      | Confirms the server is live     |
-| `save_note` | Sends a tidied note to Telegram |
+| Tool                    | What it does                                                                                                  |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ping`                  | Confirms the server is live                                                                                   |
+| `save_note`             | Sends a tidied note to Telegram                                                                               |
+| `jarvis_add_event`      | Adds an event, one-off or repeating, optionally with a Meet link (default calendar: Daily Life)               |
+| `jarvis_update_event`   | Moves or changes an event: time, day, title, calendar, add/remove Meet link, make it repeat or stop repeating |
+| `jarvis_delete_event`   | Deletes an event after you confirm                                                                            |
+| `jarvis_get_events`     | Says what's on your calendar for a day or a few days                                                          |
+| `jarvis_list_calendars` | Lists your Google calendars                                                                                   |

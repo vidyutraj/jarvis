@@ -37,7 +37,18 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 
 ## Phases
 
-1. **Foundation:** restructure scaffold, `ping` and `save_note` tools, Telegram, agentic tooling (skills, hooks, tests), deploy, connect to Claude app, test by voice.
+1. **Foundation** *(complete, 2026-11-01)*
+   - [x] Restructure scaffold: flattened to repo root, calculator demo removed, one tool per file in `src/tools/`
+   - [x] `ping` tool
+   - [x] `save_note` tool → Telegram (secrets typed in `src/env.d.ts`, `.dev.vars.example`)
+   - [x] Agentic tooling: `CLAUDE.md`, skills (`add-mcp-tool`, `add-oauth-integration` draft, `deploy`), type-check hook, `.mcp.json` docs servers
+   - [x] Tests: Vitest in the Workers runtime, `ping` + `save_note` (Telegram mocked)
+   - [x] Create Telegram bot, set secrets locally
+   - [x] Test locally with MCP Inspector (`ping` and `save_note` verified, note delivered to Telegram)
+   - [x] Set production secrets (`wrangler secret put`)
+   - [x] Deploy (2026-11-01, `https://voice-assistant.vidyut-rajagopal2006.workers.dev/mcp`; live `ping` verified)
+   - [x] Connect to the Claude app as a custom connector (no auth; both tools set to "Always allow" for smooth voice use)
+   - [x] Test by voice
 2. **Calendar and reminders:** switch to an OAuth-protected MCP server first (the authless template is public), then Google OAuth and `create_event`. Test Claude app's built-in Reminders.
 3. **Expenses:** D1 schema, `log_expense`, `query_expenses`, weekly report cron, budget alerts.
 4. **Gmail:** search, read, create_draft. No send.
@@ -51,6 +62,23 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 - Node.js 22+ via nvm (create-cloudflare requires it); version pinned in `.nvmrc`
 - Private GitHub repo
 - Test tools locally with MCP Inspector (`npx @modelcontextprotocol/inspector@latest`, Streamable HTTP, `http://localhost:8787/mcp`) before deploying
+
+## Decision log
+
+- **2026-11-01: Flattened repo layout.** The template was scaffolded into `voice-assistant/`; everything now lives at the repo root so code, docs and Claude Code config sit together. The Worker is still named `voice-assistant`.
+- **2026-11-01: Tool pattern.** Each tool is a `defineTool({ name, description, inputSchema, handler(args, env) })` object in its own file, listed in `src/tools/index.ts`. Handlers are plain functions, so tests call them directly.
+- **2026-11-01: Env reaches tools via closure.** The Agents SDK's stateless handler factory doesn't receive bindings, so `src/index.ts` builds the handler per request and passes `env` into each tool's handler.
+- **2026-11-01: Spoken-reply helpers.** `speak()` / `speakError()` in `src/lib/respond.ts` produce every tool result. Errors set `isError` and use fixed, friendly sentences; details go only to logs.
+- **2026-11-01: External API calls** live in `src/lib/`, return typed `{ ok } | { ok: false, reason }` results, never throw, and use a 10s timeout.
+- **2026-11-01: Telegram notes use HTML parse mode** (bold title, then body), with all user text HTML-escaped. The bot token is in the request URL, so URLs are never logged. Note limits: title ≤ 100 characters, body ≤ 3500 (Telegram's cap is 4096).
+- **2026-11-01: Testing.** Vitest 4 with `@cloudflare/vitest-plugin` (the renamed `@cloudflare/vitest-pool-workers`), with fake secrets in `vitest.config.ts`. A PostToolUse hook type-checks after every `.ts` edit.
+- **2026-11-01: No extra protection on the authless endpoint in Phase 1.** Accepted risk: anyone with the URL could call tools (e.g. spam Telegram via `save_note`). Deploy only for testing and move to OAuth at the start of Phase 2.
+- **2026-11-01: Preview URLs disabled** (`preview_urls: false`, `workers_dev: true` in `wrangler.jsonc`). Only the main workers.dev URL serves the Worker, so once OAuth lands, old unauthenticated versions can't be reached at per-version preview addresses.
+- **2026-11-01: `ping` stays through Phase 2** as a connection check (the OAuth switch is when connections break). Later, replace it with a `status` tool that reports which integrations are configured or need reconnecting, without sending anything.
+
+## Open risks
+
+- The server is public and unauthenticated until Phase 2 (see decision log).
 
 ## Open questions
 

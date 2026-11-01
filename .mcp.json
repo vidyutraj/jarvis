@@ -1,0 +1,12 @@
+{
+	"mcpServers": {
+		"cloudflare-docs": {
+			"type": "http",
+			"url": "https://docs.mcp.cloudflare.com/mcp"
+		},
+		"agents-docs": {
+			"type": "http",
+			"url": "https://agents.cloudflare.com/mcp"
+		}
+	}
+}

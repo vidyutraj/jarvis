@@ -17,7 +17,11 @@
 	"observability": {
 		"enabled": true
 	},
-	"upload_source_maps": true
+	"upload_source_maps": true,
+	// Only the main workers.dev URL is public. Per-version preview URLs stay off so old
+	// (e.g. pre-OAuth) versions can never be reached at their own addresses.
+	"workers_dev": true,
+	"preview_urls": false
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

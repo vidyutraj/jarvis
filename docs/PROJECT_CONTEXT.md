@@ -19,7 +19,8 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 
 - **Front end:** Claude app voice mode
 - **Server:** Cloudflare Workers (free tier), scaffolded from `cloudflare/ai/demos/remote-mcp-authless`
-- **Storage:** D1 (SQLite) for expenses, notes history, Whoop data; KV for OAuth tokens
+- **Storage:** D1 (SQLite) for expenses, notes history, bank transactions; KV for OAuth tokens
+- **Background work:** Cloudflare Queues (free plan) for bank syncing, one small job per invocation
 - **Scheduled jobs:** Cloudflare Cron Triggers (weekly/monthly reports via the Claude API)
 - **Notifications:** Telegram bot (free; chosen over SMS, which costs money)
 - **Secrets:** `wrangler secret put` in production, `.dev.vars` locally (gitignored)
@@ -31,9 +32,9 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 3. **Reminders.** Must land in the **Apple Reminders app** on my iPhone (not Google Tasks). **Resolved:** the Claude iOS app's built-in Reminders access works fully, so no custom reminders tool is needed. (The iOS Shortcut fallback is no longer needed.) Reminders are for "do this at a specific time"; notes are for "remember this idea."
 4. **Gmail drafts.** Flow: "What was the last email from X?" → Claude reads/summarises → I say my reply → saved as a draft in the same thread. Optional Telegram ping: "draft ready." Also useful for finding flight details (Expedia/Frontier confirmations are in my inbox).
 5. **Expense tracking.** Start with voice logging ("spent $12 on lunch") into D1 or a Google Sheet. Weekly/monthly Telegram reports, on-demand questions ("food spend this week?"), budget alerts.
-6. **Whoop.** Official Whoop developer API (free) plus webhooks pushing sleep, recovery, strain and workouts into D1. Mostly on-demand questions. Once the data is stored, any question about it is possible.
+6. ~~**Whoop.**~~ Dropped 2026-11-01 (see decision log).
 7. **Web search.** Use Claude's built-in web search; no custom tool needed.
-8. **Bank integration (later, but I want it).** I have PNC and Barclays personal checking accounts. Plaid for PNC. Barclays: confirm whether it's a UK account; if so, GoCardless Bank Account Data. Plan: bank feed pulls transactions automatically, voice adds context ("that Amazon charge was a gift").
+8. **Bank integration.** PNC checking and the Barclays US Frontier Airlines credit card, both through Plaid (Free Trial with Production keys, 10 connections). Transactions only: up to 2 years of history, kept current with `/transactions/sync`. Voice tools `jarvis_connect_bank`, `jarvis_spending`, `jarvis_spending_page`, plus a spending-by-category-and-month page. Details and the Plaid build record: `PLAID_PLAN.md`. Later: voice adds context ("that Amazon charge was a gift").
 
 ## Phases
 
@@ -66,9 +67,15 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
    - [x] ~~Test Claude app's built-in Reminders~~ (done: built-in works, nothing to build)
 3. **Expenses:** D1 schema, `log_expense`, `query_expenses`, weekly report cron, budget alerts.
 4. **Gmail:** search, read, create_draft. No send.
-5. **Whoop:** OAuth, webhook endpoint, D1 storage, `query_health`.
-6. **Bank integration:** Plaid (PNC), possibly GoCardless (Barclays).
-7. **Maybe later:** a simple web dashboard for browsing notes, spending and health trends.
+5. **Bank integration (Plaid)** *(in progress)*
+   - [x] D1 schema, Plaid client, encrypted tokens, webhook receiver with signature checks, Queue-driven paged sync, hourly/daily cron fallback
+   - [x] Tools: `jarvis_connect_bank` (Hosted Link → Telegram, reconnect via update mode), `jarvis_spending`, `jarvis_spending_page`; `/spending` page
+   - [x] Tests (Plaid mocked; real ES256 signature checks)
+   - [x] Sandbox end-to-end run (2026-11-01): `npm run test:sandbox` and `npm run test:hosted-link` (Platypus OAuth Bank via Telegram Hosted Link, so no redirect URI needed)
+   - [ ] Plaid company profile + latest MSA confirmed (PNC needs it)
+   - [x] Create D1 `jarvis` + Queue `jarvis-bank-jobs`, apply migrations remotely, set production secrets, deploy (2026-11-01, version 6cbaf783)
+   - [ ] Connect PNC and Barclays by voice; confirm history import and the spending page
+6. **Maybe later:** a simple web dashboard for browsing notes (spending has its own page as of Phase 5).
 
 ## Dev environment
 
@@ -103,6 +110,14 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 - **2026-11-01: Calendar nicknames and Meet links** are wrangler vars, not code. `CALENDAR_ALIASES` maps words speech-to-text gets wrong to calendar names (`sock` → SOC). `MEET_CALENDARS` lists calendars whose timed events automatically get a Google Meet link (Waresport); all-day events never do. Meet links are created via `conferenceData.createRequest` with a random `requestId` (so a retry can't create a second Meet), and are never read aloud; Jarvis just says the event has a Meet link.
 - **2026-11-01: Repeating events, edits and deletes.** `jarvis_add_event` takes `add_meet_link` (any calendar; Waresport still defaults on) and `repeat` (daily/weekly on chosen days/monthly/yearly, every N, until a date or N times), stored as an RRULE; a weekly repeat on chosen days starts on the first of those days, and timed UNTIL is the end of that day in New York, in UTC. `jarvis_update_event` edits in place (keeps Meet links and IDs): new time/day/length, all-day on/off, title, location, notes, add Meet, or move to another calendar; time-only changes keep the event's length. `jarvis_delete_event` is marked destructive and Claude must confirm first. Events are found by title words (Google search, then title match) on the given day or the next 31 days on editable visible calendars; different matching events → Jarvis lists them and asks which. Repeating events: one occurrence by default, the whole series only when the user says all of them. Google limits respected: a whole series can't move to another day (time only), and only a whole series can move between calendars.
 - **2026-11-01: Changing repeats and removing Meet links.** `jarvis_update_event` can make a one-off event repeat, replace a series' pattern, or stop it (`stop_repeating`); these always apply to the whole series, even if the user names one occurrence. Making an event repeat weekly on days that don't include its current day moves it to the first chosen day, so Google doesn't keep a stray occurrence. Stopping keeps past occurrences: the RRULE gets UNTIL = end of today (existing UNTIL/COUNT replaced, EXDATE/RDATE lines kept); a series that hasn't started yet becomes a single event on its first date. `add_meet_link: false` removes a Meet link (PATCH `conferenceData: null` with `conferenceDataVersion=1`; confirmed working on a live event by voice, 2026-11-01).
+- **2026-11-01: Whoop dropped from the roadmap.** No longer wanted; bank integration takes its place as the next account integration.
+
+- **2026-11-01: Bank integration via Plaid, inside Jarvis.** Barclays turned out to be the US Frontier Airlines card, so Plaid covers both banks (no GoCardless). Transactions only (no Liabilities consent; adding it later means one re-consent). `days_requested: 730`, fixed at first link. Category taxonomy pinned to PFC v2.
+- **2026-11-01: Hosted Link, delivered by Telegram.** `jarvis_connect_bank` creates a Plaid Hosted Link session (1-hour link) and sends the URL to Telegram; it's never spoken. Plaid hosts the bank OAuth step, so no redirect URI is registered. The tool refuses to start a second connection to a bank already connected, and the completion step removes any duplicate Item it finds (duplicates are billed and use Free Trial connections). Reconnects use Plaid update mode on the same Item.
+- **2026-11-01: Bank routes outside OAuth.** `POST /plaid/webhook` is public but acts only on a verified Plaid signature (ES256 JWT via `jose`, iat under 5 minutes, SHA-256 of the raw body). `/spending` serves a static shell; its data endpoint needs an HMAC-signed token that expires after 15 minutes. The token travels in the URL fragment so it never reaches server logs. No tool route is unauthenticated.
+- **2026-11-01: Bank secrets.** `PLAID_CLIENT_ID`, `PLAID_SECRET` (per environment) and `JARVIS_SECRET_KEY` (32+ random bytes) as Worker secrets; `PLAID_ENV` is a var (`production` in wrangler.jsonc, `sandbox` in `.dev.vars`). Access and link tokens are AES-GCM encrypted in D1 with keys derived from `JARVIS_SECRET_KEY` (HKDF, one key per purpose). Rotating that secret makes stored bank connections unusable (reconnect each bank).
+- **2026-11-01: Sync within the free plan's 10 ms CPU.** Webhooks and crons only enqueue. Each Queue job fetches one `/transactions/sync` page (250 transactions) into staging tables; when `has_more` is false one atomic D1 batch applies the staged adds/removals and the new cursor. Nothing partial is ever visible and the committed cursor never advances mid-loop. Every write is fenced on (run id, step), so duplicate deliveries are no-ops; a mutation-during-pagination error restarts from the run's starting cursor. Hourly cron: finish Link sessions whose webhook was missed and revive stuck runs; daily cron (11:30 UTC): catch-up sync.
+- **2026-11-01: What counts as spending.** Purchases minus refunds, excluding transfers, loan and card payments, loan disbursements and income, so a PNC → Barclays card payment isn't double counted. Low-confidence categories show as "Uncategorized".
 
 ## Open risks
 
@@ -110,5 +125,5 @@ Goal: a seamless, live, chatty voice experience, like a normal Claude voice conv
 
 ## Open questions
 
-- Is the Barclays account UK or US?
-- My Google calendar names and default (I can list them once Google sign-in works)
+- ~~Is the Barclays account UK or US?~~ Resolved: US (Frontier Airlines credit card), via Plaid.
+- ~~My Google calendar names and default~~ Resolved: Daily Life is the default.

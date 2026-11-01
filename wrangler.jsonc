@@ -35,8 +35,28 @@
 		// Spoken nicknames → calendar names (for words speech-to-text gets wrong).
 		"CALENDAR_ALIASES": { "sock": "SOC" },
 		// Timed events added to these calendars automatically get a Google Meet link.
-		"MEET_CALENDARS": ["Waresport"]
-	}
+		"MEET_CALENDARS": ["Waresport"],
+		// Plaid environment: "sandbox" or "production". Overridden locally in .dev.vars.
+		"PLAID_ENV": "production"
+	},
+	// Bank transactions, encrypted Plaid tokens, sync state (migrations/).
+	// Create with: npx wrangler d1 create jarvis --binding DB --update-config
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "jarvis",
+			"database_id": "cb8470a5-8de1-45cb-9f25-be9a9bef5192",
+			"migrations_dir": "migrations"
+		}
+	],
+	// Bank work runs one small job per invocation (free plan: 10 ms CPU each).
+	// Create with: npx wrangler queues create jarvis-bank-jobs
+	"queues": {
+		"producers": [{ "binding": "BANK_JOBS", "queue": "jarvis-bank-jobs" }],
+		"consumers": [{ "queue": "jarvis-bank-jobs", "max_batch_size": 1, "max_retries": 8 }]
+	},
+	// UTC. Hourly: finish Link sessions whose webhook was missed. Daily: catch-up sync.
+	"triggers": { "crons": ["0 * * * *", "30 11 * * *"] }
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement

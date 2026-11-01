@@ -10,6 +10,14 @@ interface JarvisSecrets {
 	GOOGLE_CLIENT_SECRET: string;
 	/** The only Google account allowed to sign in. */
 	ALLOWED_EMAIL: string;
+	/** Plaid API keys (Dashboard → Developers → Keys). The secret is per environment. */
+	PLAID_CLIENT_ID: string;
+	PLAID_SECRET: string;
+	/**
+	 * At least 32 random bytes, base64. Encrypts stored Plaid tokens and signs
+	 * spending-page links. Changing it makes stored bank connections unusable.
+	 */
+	JARVIS_SECRET_KEY: string;
 }
 
 interface JarvisBindings extends JarvisSecrets {

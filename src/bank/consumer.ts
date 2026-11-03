@@ -1,6 +1,7 @@
 import { handleItemEvent } from "./item-events";
 import { isBankJob, RetryLater, retryDelaySeconds, type BankJob } from "./jobs";
 import { completeLink } from "./link";
+import { DATA_VERSION } from "./store";
 import { STALE_RUN_MS, startSync, syncPage } from "./sync";
 
 /** Queue consumer for BANK_JOBS (max_batch_size 1, so one job per invocation). */
@@ -55,6 +56,17 @@ export async function handleBankCron(cron: string, env: Env, now = new Date()): 
 	const pending = await env.DB.prepare("SELECT link_token_hash FROM bank_link_sessions WHERE status = 'pending'")
 		.all<{ link_token_hash: string }>();
 	for (const row of pending.results) jobs.push({ kind: "complete_link", linkTokenHash: row.link_token_hash });
+
+	// One-time full re-sync after stored fields change, so existing history gains them.
+	// Same Item and access token: no new bank login, nothing re-billed.
+	const upgraded = await env.DB.prepare(
+		`UPDATE bank_items SET sync_cursor = NULL, data_version = ?
+		WHERE data_version < ? AND sync_run_id IS NULL AND status IN ('ok', 'pending_disconnect')
+		RETURNING item_id`,
+	)
+		.bind(DATA_VERSION, DATA_VERSION)
+		.all<{ item_id: string }>();
+	for (const row of upgraded.results) jobs.push({ kind: "sync_start", itemId: row.item_id });
 
 	const staleBefore = new Date(now.getTime() - STALE_RUN_MS).toISOString();
 	const syncable = await env.DB.prepare(

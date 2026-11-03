@@ -1,4 +1,6 @@
+import { accountsTool } from "./accounts";
 import { addEventTool } from "./add-event";
+import { transactionsTool } from "./transactions";
 import { connectBankTool } from "./connect-bank";
 import { deleteEventTool } from "./delete-event";
 import { getEventsTool } from "./get-events";
@@ -24,4 +26,6 @@ export const tools: Tool[] = [
 	connectBankTool,
 	spendingTool,
 	spendingPageTool,
+	transactionsTool,
+	accountsTool,
 ];

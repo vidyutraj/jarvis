@@ -52,7 +52,9 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
 - [x] Tests (Plaid mocked; 35 bank tests), docs
 - [x] End-to-end Sandbox run: `npm run test:sandbox` (2 personas, duplicate, reconnect) and `npm run test:hosted-link` (owner completed Platypus OAuth Bank via the Telegram Hosted Link)
 - [x] Production: D1 + Queue created, remote migrations, secrets, deployed (2026-11-01, version 6cbaf783)
-- [ ] Link PNC and Barclays
+- [x] Link PNC and Barclays (owner, 2026-11-02)
+- [x] Round 3: include_original_description, richer fields, cached balances via /accounts/get after each sync,
+      jarvis_transactions / jarvis_accounts, spending group_by, page drill-down; one-time re-sync (DATA_VERSION 2)
 
 ## Acceptance
 
@@ -67,6 +69,9 @@ month." Built as a feature of Jarvis (this repo) rather than a separate local ap
   Persona 1 user_transactions_dynamic @ First Platypus: 311 transactions, 15 categories, 17 pending;
   "Spending for November 2026: $1,603 total." Persona 2 user_good @ First Gingham CU: 16 transactions,
   9 categories. Remaining: CHECK-009 (production human tasks).
+
+- Round 3 (2026-11-02): unit 176/176; Sandbox 6/6 with real detail (311/311 raw descriptions and
+  subcategories, 97 with counterparties, 22 located, 7/7 accounts with balances).
 
 ## Maintenance
 

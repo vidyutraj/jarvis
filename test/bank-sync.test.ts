@@ -112,7 +112,8 @@ describe("paged transactions sync", () => {
 		sent.push({ kind: "sync_start", itemId: "item-1" });
 		await drain(e, sent);
 
-		expect(api.calls.map((c) => c.body.cursor)).toEqual(["start", "c1", "start"]);
+		const syncCalls = api.calls.filter((c) => c.path === "/transactions/sync");
+		expect(syncCalls.map((c) => c.body.cursor)).toEqual(["start", "c1", "start"]);
 		// Staged rows from the abandoned pass are discarded.
 		expect(await transactionIds()).toEqual(["fresh"]);
 		expect((await getItem(env.DB, "item-1"))?.sync_cursor).toBe("c9");
@@ -147,7 +148,7 @@ describe("paged transactions sync", () => {
 		await syncPage(e, job.itemId, job.runId, job.step); // redelivered
 		await syncPage(e, job.itemId, "some-other-run", 0);
 
-		expect(api.calls).toHaveLength(1);
+		expect(api.calls.filter((c) => c.path === "/transactions/sync")).toHaveLength(1);
 		expect(await transactionIds()).toEqual(["t1"]);
 	});
 

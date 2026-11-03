@@ -6,8 +6,11 @@ import {
 	monthName,
 	SPENDING_CATEGORIES,
 	spendingByMonth,
+	spendingGrouped,
 	speakDollars,
+	type SpendingGroupRow,
 } from "../bank/spending";
+import { subcategoryLabel } from "../bank/transactions";
 import { todayIn } from "../lib/dates";
 import { speak, speakError } from "../lib/respond";
 import { dateContext } from "./calendar-common";
@@ -15,6 +18,7 @@ import { defineTool } from "./types";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const TOP_CATEGORIES = 5;
+const GROUP_LINES = 15;
 
 export const spendingTool = defineTool({
 	name: "jarvis_spending",
@@ -34,9 +38,16 @@ export const spendingTool = defineTool({
 				"Only this category, e.g. FOOD_AND_DRINK (restaurants, groceries, coffee), GENERAL_MERCHANDISE " +
 					"(shopping, Amazon), TRAVEL (flights, hotels), TRANSPORTATION (gas, rideshare, parking).",
 			),
+		group_by: z
+			.enum(["category", "subcategory", "merchant", "month"])
+			.optional()
+			.describe(
+				"How to break the total down. Default category. 'merchant' for where the money went (e.g. top merchants), " +
+					"'subcategory' for finer categories (coffee vs groceries), 'month' for a trend over several months.",
+			),
 	}),
 	annotations: { readOnlyHint: true },
-	handler: async ({ from_month, to_month, category }, { env }) => {
+	handler: async ({ from_month, to_month, category, group_by }, { env }) => {
 		const status = await bankStatus(env.DB);
 		if (status.connected === 0) {
 			return speak("No bank accounts are connected yet. Ask me to connect your bank to get started.");
@@ -56,6 +67,31 @@ export const spendingTool = defineTool({
 				? `${status.needsReconnect.join(" and ")} needs reconnecting, so recent purchases may be missing.`
 				: "",
 		].filter(Boolean);
+
+		if (group_by && group_by !== "category") {
+			const groups = await spendingGrouped(env.DB, from, to, group_by, category);
+			if (groups.length === 0) return speak([`No spending found for ${period}.`, ...caveats].join(" "));
+			const total = groups.reduce((sum, g) => sum + g.total, 0);
+			const shown = group_by === "month" ? groups : groups.slice(0, GROUP_LINES);
+			const label = (g: SpendingGroupRow) =>
+				group_by === "month"
+					? monthName(g.key)
+					: group_by === "subcategory"
+						? g.key === "UNCATEGORIZED"
+							? "Uncategorized"
+							: `${categoryLabel(g.primary ?? "OTHER")} > ${subcategoryLabel(g.primary, g.key)}`
+						: g.key;
+			const scope = category ? `${categoryLabel(category)} spending` : "Spending";
+			return speak(
+				[
+					`${scope} for ${period} by ${group_by}: ${speakDollars(total)} total across ${groups.length} ${group_by === "month" ? "months" : "groups"}` +
+						(shown.length < groups.length ? `, top ${shown.length} shown.` : "."),
+					...caveats,
+					`${group_by} | total | transactions`,
+					...shown.map((g) => `${label(g)} | ${speakDollars(g.total)} | ${g.count}`),
+				].join("\n"),
+			);
+		}
 
 		if (category) {
 			const matching = cells.filter((cell) => cell.category === category);

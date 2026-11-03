@@ -103,6 +103,42 @@ export async function spendingByMonth(
 	return results;
 }
 
+export type SpendingGroup = "subcategory" | "merchant" | "month";
+
+export interface SpendingGroupRow {
+	key: string;
+	primary: string | null;
+	total: number;
+	count: number;
+}
+
+/** Spending for fromMonth..toMonth grouped by subcategory, merchant or month (optionally one category). */
+export async function spendingGrouped(
+	db: D1Database,
+	fromMonth: string,
+	toMonth: string,
+	groupBy: SpendingGroup,
+	category?: string,
+): Promise<SpendingGroupRow[]> {
+	const key =
+		groupBy === "month"
+			? "substr(date, 1, 7)"
+			: groupBy === "merchant"
+				? "COALESCE(merchant_name, name, 'Unknown')"
+				: "COALESCE(category_detailed, 'UNCATEGORIZED')";
+	const categoryFilter = category ? ` AND ${CATEGORY_SQL} = ?` : "";
+	const { results } = await db
+		.prepare(
+			`SELECT ${key} AS key, MAX(category_primary) AS "primary", ROUND(SUM(amount), 2) AS total, COUNT(*) AS count
+			FROM bank_transactions
+			WHERE date >= ? AND date < ? AND ${SPENDING_FILTER}${categoryFilter}
+			GROUP BY key ORDER BY ${groupBy === "month" ? "key" : "total DESC"}`,
+		)
+		.bind(`${fromMonth}-01`, monthEndExclusive(toMonth), ...(category ? [category] : []))
+		.all<SpendingGroupRow>();
+	return results;
+}
+
 export interface BankStatusSummary {
 	connected: number;
 	importing: string[];

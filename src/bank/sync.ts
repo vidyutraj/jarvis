@@ -1,4 +1,5 @@
 import {
+	getAccounts,
 	isTransientPlaidFailure,
 	RECONNECT_ERROR_CODES,
 	syncTransactions,
@@ -6,7 +7,7 @@ import {
 } from "../lib/plaid";
 import { markNeedsReconnect, notifyHistoryImported, revokeAndNotify } from "./item-events";
 import { enqueue, RetryLater } from "./jobs";
-import { accessTokenFor, getItem } from "./store";
+import { accessTokenFor, accountUpsert, getItem } from "./store";
 
 /**
  * Paged /transactions/sync (TXN-002/004/007). One Queue message = one page:
@@ -39,6 +40,23 @@ const STAGED_COLUMNS = [
 	"category_detailed",
 	"category_confidence",
 	"payment_channel",
+	"original_description",
+	"datetime",
+	"authorized_datetime",
+	"merchant_entity_id",
+	"website",
+	"logo_url",
+	"location_address",
+	"location_city",
+	"location_region",
+	"location_postal_code",
+	"location_country",
+	"location_lat",
+	"location_lon",
+	"store_number",
+	"counterparties",
+	"transaction_code",
+	"check_number",
 ] as const;
 const GUARD_PARAMS = 3;
 const GUARD = "EXISTS (SELECT 1 FROM bank_items WHERE item_id = ? AND sync_run_id = ? AND sync_step = ?)";
@@ -174,6 +192,10 @@ export async function syncPage(
 	const committed = results[results.length - 1]?.results[0];
 	if (!committed) return; // lost the run to a newer one; nothing was applied
 
+	// Cached balances ride along with Transactions at no extra cost (/accounts/get, not
+	// the billed real-time /accounts/balance/get). Best effort: a failure keeps old values.
+	await refreshAccounts(env, itemId, accessToken, now);
+
 	// "Complete" only counts once transactions are actually stored: Plaid can report
 	// HISTORICAL_UPDATE_COMPLETE on a sync that returns nothing yet (seen in Sandbox).
 	if (committed.historical_complete && !item.historical_complete) {
@@ -182,6 +204,13 @@ export async function syncPage(
 	if (committed.sync_again) {
 		await enqueue(env, { kind: "sync_start", itemId });
 	}
+}
+
+/** Upserts the Item's accounts with Plaid's cached balances. Never throws. */
+export async function refreshAccounts(env: SyncEnv, itemId: string, accessToken: string, now = new Date()): Promise<void> {
+	const result = await getAccounts(env, accessToken);
+	if (!result.ok) return;
+	await env.DB.batch(result.data.accounts.map((a) => accountUpsert(env.DB, itemId, a, now)));
 }
 
 /** Releases a run's lock and drops its staged pages. */
@@ -226,7 +255,31 @@ function stagedRow(itemId: string, tx: PlaidTransaction): (string | number | nul
 		category?.detailed ?? null,
 		category?.confidence_level ?? null,
 		tx.payment_channel ?? null,
+		tx.original_description ?? null,
+		tx.datetime ?? null,
+		tx.authorized_datetime ?? null,
+		tx.merchant_entity_id ?? null,
+		tx.website ?? null,
+		tx.logo_url ?? null,
+		tx.location?.address ?? null,
+		tx.location?.city ?? null,
+		tx.location?.region ?? null,
+		tx.location?.postal_code ?? null,
+		tx.location?.country ?? null,
+		tx.location?.lat ?? null,
+		tx.location?.lon ?? null,
+		tx.location?.store_number ?? null,
+		counterpartiesJson(tx),
+		tx.transaction_code ?? null,
+		tx.check_number ?? null,
 	];
+}
+
+function counterpartiesJson(tx: PlaidTransaction): string | null {
+	const list = (tx.counterparties ?? [])
+		.filter((c) => c?.name)
+		.map((c) => ({ name: c.name, type: c.type ?? null, website: c.website ?? null, confidence: c.confidence_level ?? null }));
+	return list.length > 0 ? JSON.stringify(list) : null;
 }
 
 function chunk<T>(items: T[], size: number): T[][] {

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { vi } from "vitest";
 import type { BankJob } from "../src/bank/jobs";
-import { encryptAccessToken } from "../src/bank/store";
+import { DATA_VERSION, encryptAccessToken } from "../src/bank/store";
 import type { PlaidTransaction } from "../src/lib/plaid";
 import { jsonResponse } from "./helpers";
 
@@ -90,8 +90,8 @@ export async function seedItem(
 ): Promise<string> {
 	const itemId = options.itemId ?? "item-1";
 	await env.DB.prepare(
-		`INSERT INTO bank_items (item_id, access_token_enc, institution_id, institution_name, status, historical_complete)
-		VALUES (?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO bank_items (item_id, access_token_enc, institution_id, institution_name, status, historical_complete, data_version)
+		VALUES (?, ?, ?, ?, ?, ?, ${DATA_VERSION})`,
 	)
 		.bind(
 			itemId,

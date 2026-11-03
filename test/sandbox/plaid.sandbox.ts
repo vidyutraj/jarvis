@@ -6,7 +6,9 @@ import { accessTokenFor, getItem, listItems } from "../../src/bank/store";
 import { startSync, syncPage } from "../../src/bank/sync";
 import { removeItem } from "../../src/lib/plaid";
 import { connectBankTool } from "../../src/tools/connect-bank";
+import { accountsTool } from "../../src/tools/accounts";
 import { spendingTool } from "../../src/tools/spending";
+import { transactionsTool } from "../../src/tools/transactions";
 import { resultText, testAuth } from "../helpers";
 import { fakeQueue, resetBankTables } from "../bank-helpers";
 
@@ -110,6 +112,26 @@ describe.skipIf(!isSandbox)("Plaid Sandbox end to end", () => {
 		const staged = await env.DB.prepare("SELECT COUNT(*) AS n FROM bank_sync_staged").first<{ n: number }>();
 		expect(staged?.n).toBe(0);
 		expect((await getItem(env.DB, item!.item_id))?.sync_cursor).toBeTruthy();
+
+		// Richer detail from real Plaid data: raw bank text, subcategories, cached balances.
+		const detail = await env.DB.prepare(
+			`SELECT COUNT(original_description) AS raw, COUNT(category_detailed) AS detailed, COUNT(location_city) AS located,
+				COUNT(datetime) AS timed, COUNT(counterparties) AS parties FROM bank_transactions WHERE item_id = ?`,
+		)
+			.bind(item!.item_id)
+			.first<Record<string, number>>();
+		const balances = await env.DB.prepare(
+			"SELECT COUNT(*) AS accounts, COUNT(balance_current) AS with_balance FROM bank_accounts WHERE item_id = ?",
+		)
+			.bind(item!.item_id)
+			.first<{ accounts: number; with_balance: number }>();
+		console.info(`persona 1 detail: ${JSON.stringify(detail)}; accounts ${JSON.stringify(balances)}`);
+		expect(detail!.raw).toBeGreaterThan(0);
+		expect(detail!.detailed).toBeGreaterThan(0);
+		expect(balances!.with_balance).toBeGreaterThan(0);
+		const listed = resultText(await transactionsTool.handler({ limit: 3 }, { env: e, auth: testAuth() }));
+		console.info(`persona 1 transactions:\n${listed}`);
+		console.info(`persona 1 accounts:\n${resultText(await accountsTool.handler({}, { env: e, auth: testAuth() }))}`);
 
 		const month = s!.last.slice(0, 7);
 		const answer = resultText(await spendingTool.handler({ from_month: month }, { env: e, auth: testAuth() }));

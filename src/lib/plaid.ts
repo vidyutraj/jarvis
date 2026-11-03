@@ -221,6 +221,14 @@ export interface PlaidAccount {
 	mask?: string | null;
 	type: string;
 	subtype?: string | null;
+	/** Cached by Plaid at its last Item update (about daily), not real-time. */
+	balances?: {
+		available?: number | null;
+		current?: number | null;
+		limit?: number | null;
+		iso_currency_code?: string | null;
+		unofficial_currency_code?: string | null;
+	} | null;
 }
 
 export function getAccounts(
@@ -261,6 +269,31 @@ export interface PlaidTransaction {
 		confidence_level?: string | null;
 	} | null;
 	payment_channel?: string | null;
+	/** Only when include_original_description is set: the institution's raw text. */
+	original_description?: string | null;
+	datetime?: string | null;
+	authorized_datetime?: string | null;
+	merchant_entity_id?: string | null;
+	website?: string | null;
+	logo_url?: string | null;
+	location?: {
+		address?: string | null;
+		city?: string | null;
+		region?: string | null;
+		postal_code?: string | null;
+		country?: string | null;
+		lat?: number | null;
+		lon?: number | null;
+		store_number?: string | null;
+	} | null;
+	counterparties?: {
+		name?: string | null;
+		type?: string | null;
+		website?: string | null;
+		confidence_level?: string | null;
+	}[] | null;
+	transaction_code?: string | null;
+	check_number?: string | null;
 }
 
 export interface TransactionsSyncResponse {
@@ -285,7 +318,8 @@ export function syncTransactions(
 		access_token: accessToken,
 		count: SYNC_PAGE_SIZE,
 		// Pin the taxonomy so category names never change under us (TXN-006).
-		options: { personal_finance_category_version: "v2" },
+		// Raw institution text alongside the cleaned merchant name (TXN-013).
+		options: { personal_finance_category_version: "v2", include_original_description: true },
 	};
 	if (cursor) body.cursor = cursor;
 	return plaidPost(env, "/transactions/sync", body, SYNC_TIMEOUT_MS);

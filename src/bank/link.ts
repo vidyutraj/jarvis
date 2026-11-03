@@ -12,6 +12,8 @@ import { escapeTelegramHtml, sendTelegramMessage } from "../lib/telegram";
 import { enqueue, RetryLater } from "./jobs";
 import {
 	accessTokenFor,
+	accountUpsert,
+	DATA_VERSION,
 	decryptLinkToken,
 	encryptAccessToken,
 	getItem,
@@ -162,9 +164,9 @@ export async function addItem(env: LinkEnv, publicToken: string, hintedInstituti
 
 	const [inserted] = await env.DB.batch([
 		env.DB.prepare(
-			`INSERT INTO bank_items (item_id, access_token_enc, institution_id, institution_name)
-			VALUES (?, ?, ?, ?) ON CONFLICT(item_id) DO NOTHING`,
-		).bind(itemId, await encryptAccessToken(env, accessToken), institutionId, institutionName),
+			`INSERT INTO bank_items (item_id, access_token_enc, institution_id, institution_name, data_version)
+			VALUES (?, ?, ?, ?, ?) ON CONFLICT(item_id) DO NOTHING`,
+		).bind(itemId, await encryptAccessToken(env, accessToken), institutionId, institutionName, DATA_VERSION),
 		...(accounts.ok ? accountStatements(env.DB, itemId, accounts.data.accounts) : []),
 	]);
 	// Always (re)start the sync: a retried job may have stored the Item but failed before this.
@@ -186,20 +188,5 @@ function describeAccounts(accounts: PlaidAccount[]): string {
 }
 
 function accountStatements(db: D1Database, itemId: string, accounts: PlaidAccount[]): D1PreparedStatement[] {
-	return accounts.map((a) =>
-		db.prepare(
-			`INSERT OR REPLACE INTO bank_accounts
-				(account_id, item_id, persistent_account_id, name, official_name, mask, type, subtype)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		).bind(
-			a.account_id,
-			itemId,
-			a.persistent_account_id ?? null,
-			a.name,
-			a.official_name ?? null,
-			a.mask ?? null,
-			a.type,
-			a.subtype ?? null,
-		),
-	);
+	return accounts.map((a) => accountUpsert(db, itemId, a));
 }

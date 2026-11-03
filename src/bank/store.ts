@@ -1,6 +1,44 @@
+import type { PlaidAccount } from "../lib/plaid";
 import { decryptSecret, encryptSecret } from "../lib/secret-box";
 
+/** Inserts or updates an account with Plaid's cached balances, keeping the row's identity. */
+export function accountUpsert(db: D1Database, itemId: string, a: PlaidAccount, now = new Date()): D1PreparedStatement {
+	return db
+		.prepare(
+			`INSERT INTO bank_accounts (account_id, item_id, persistent_account_id, name, official_name, mask, type, subtype,
+				balance_current, balance_available, balance_limit, balance_currency, balance_as_of)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			ON CONFLICT(account_id) DO UPDATE SET name = excluded.name, official_name = excluded.official_name,
+				mask = excluded.mask, type = excluded.type, subtype = excluded.subtype,
+				persistent_account_id = excluded.persistent_account_id,
+				balance_current = excluded.balance_current, balance_available = excluded.balance_available,
+				balance_limit = excluded.balance_limit, balance_currency = excluded.balance_currency,
+				balance_as_of = excluded.balance_as_of`,
+		)
+		.bind(
+			a.account_id,
+			itemId,
+			a.persistent_account_id ?? null,
+			a.name,
+			a.official_name ?? null,
+			a.mask ?? null,
+			a.type,
+			a.subtype ?? null,
+			a.balances?.current ?? null,
+			a.balances?.available ?? null,
+			a.balances?.limit ?? null,
+			a.balances?.iso_currency_code ?? a.balances?.unofficial_currency_code ?? null,
+			now.toISOString(),
+		);
+}
+
 /** D1 access for the bank feed. Tokens are encrypted before they reach D1. */
+
+/**
+ * Version of the stored transaction fields. Bump it with a migration that adds
+ * fields: the hourly cron then re-syncs older Items once from an empty cursor.
+ */
+export const DATA_VERSION = 2;
 
 export type ItemStatus = "ok" | "login_required" | "pending_disconnect" | "revoked";
 

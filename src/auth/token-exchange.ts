@@ -4,6 +4,7 @@ import {
 	type TokenExchangeCallbackOptions,
 	type TokenExchangeCallbackResult,
 } from "@cloudflare/workers-oauth-provider";
+import { rememberGoogleSignIn } from "../ask/google-signin";
 import { refreshGoogleToken } from "../lib/google-oauth";
 import { isAuthProps, type AuthProps } from "./props";
 
@@ -45,6 +46,8 @@ export async function handleTokenExchange(
 		googleRefreshToken: result.tokens.refreshToken ?? props.googleRefreshToken,
 		googleExpiresAt: result.tokens.expiresAt,
 	};
+	// Keeps the copy "Hey Jarvis" (/ask) uses current, and fills it in for grants made before /ask existed.
+	await rememberGoogleSignIn(env, newProps);
 	return { newProps, accessTokenTTL: accessTokenTtl(newProps.googleExpiresAt) };
 }
 

@@ -20,6 +20,8 @@ export default defineConfig({
 					PLAID_ENV: "sandbox",
 					// 32 bytes of 0x2a, base64. Test-only.
 					JARVIS_SECRET_KEY: "KioqKioqKioqKioqKioqKioqKioqKioqKioqKioqKio=",
+					ANTHROPIC_API_KEY: "test-anthropic-key",
+					JARVIS_ASK_KEY: "test-ask-key-0123456789abcdefghijklmnop",
 					TEST_MIGRATIONS: await readD1Migrations(path.join(import.meta.dirname, "migrations")),
 				},
 			},

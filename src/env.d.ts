@@ -18,6 +18,10 @@ interface JarvisSecrets {
 	 * spending-page links. Changing it makes stored bank connections unusable.
 	 */
 	JARVIS_SECRET_KEY: string;
+	/** Claude API key for "Hey Jarvis" (/ask). Billed per use, separate from the Claude app subscription. */
+	ANTHROPIC_API_KEY: string;
+	/** The iPhone Shortcut's bearer key for /ask: 32+ random characters. */
+	JARVIS_ASK_KEY: string;
 }
 
 interface JarvisBindings extends JarvisSecrets {

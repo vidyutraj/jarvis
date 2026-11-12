@@ -23,3 +23,8 @@ PLAID_ENV=sandbox
 # 32+ random bytes, base64: encrypts stored bank tokens and signs spending-page links.
 # Generate with: openssl rand -base64 32   (production: npx wrangler secret put JARVIS_SECRET_KEY)
 JARVIS_SECRET_KEY=replace-with-output-of-openssl-rand-base64-32
+
+# "Hey Jarvis" (/ask). Claude API key from platform.claude.com (billed per use).
+ANTHROPIC_API_KEY=replace-with-claude-api-key
+# The iPhone Shortcut's key for /ask. Generate with: openssl rand -base64 32
+JARVIS_ASK_KEY=replace-with-output-of-openssl-rand-base64-32

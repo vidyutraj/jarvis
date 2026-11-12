@@ -9,6 +9,7 @@ import {
 	fetchGoogleUser,
 	googleAuthorizeUrl,
 } from "../lib/google-oauth";
+import { rememberGoogleSignIn } from "../ask/google-signin";
 import { isAllowedEmail } from "./allowlist";
 import { consentPage, messagePage } from "./pages";
 import type { AuthProps } from "./props";
@@ -145,6 +146,8 @@ async function handleGoogleCallback(request: Request, env: Env): Promise<Respons
 		googleRefreshToken: tokens.refreshToken,
 		googleExpiresAt: tokens.expiresAt,
 	};
+	// Lets "Hey Jarvis" (/ask) act as the owner without Claude's connector.
+	await rememberGoogleSignIn(env, props);
 	const { redirectTo } = await oauth.completeAuthorization({
 		request: original,
 		userId: user.sub,

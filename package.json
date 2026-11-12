@@ -17,6 +17,7 @@
 		"test:hosted-link": "vitest run --config vitest.sandbox.config.ts --silent=false hosted-link.interactive"
 	},
 	"dependencies": {
+		"@anthropic-ai/sdk": "^1.8.0",
 		"@cloudflare/workers-oauth-provider": "^1.2.4",
 		"@modelcontextprotocol/server": "2.3.1",
 		"agents": "^0.29.0",

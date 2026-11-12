@@ -5,7 +5,12 @@
  * decrypt a stored bank token or vice versa.
  */
 
-type KeyPurpose = "plaid-access-token" | "plaid-link-token" | "spending-link";
+type KeyPurpose =
+	| "plaid-access-token"
+	| "plaid-link-token"
+	| "spending-link"
+	| "google-refresh-token"
+	| "ask-history";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

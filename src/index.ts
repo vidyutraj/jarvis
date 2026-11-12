@@ -5,6 +5,7 @@ import { env as workerEnv } from "cloudflare:workers";
 import { isAllowedEmail } from "./auth/allowlist";
 import { googleAuthHandler } from "./auth/google-handler";
 import { isAuthProps } from "./auth/props";
+import { handleAskRoute } from "./ask/route";
 import { handleBankCron, handleBankJobs } from "./bank/consumer";
 import { handleSpendingRoute } from "./bank/spending-page";
 import { handlePlaidWebhook, PLAID_WEBHOOK_PATH } from "./bank/webhook";
@@ -61,14 +62,17 @@ const oauthProvider = new OAuthProvider<Env>({
 });
 
 /**
- * Bank routes sit outside the OAuth layer but are not open: the Plaid webhook
- * only acts on a verified Plaid signature, and spending data needs a signed,
- * short-lived token. Everything else (including /mcp) goes through OAuthProvider.
+ * Bank routes and /ask sit outside the OAuth layer but are not open: the Plaid
+ * webhook only acts on a verified Plaid signature, spending data needs a signed,
+ * short-lived token, and /ask needs the Shortcut's secret key. Everything else
+ * (including /mcp) goes through OAuthProvider.
  */
 export default {
 	async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
 		const { pathname } = new URL(request.url);
 		if (pathname === PLAID_WEBHOOK_PATH) return handlePlaidWebhook(request, env);
+		const ask = await handleAskRoute(request, env, ctx);
+		if (ask) return ask;
 		const spending = await handleSpendingRoute(request, env);
 		if (spending) return spending;
 		return oauthProvider.fetch(request, env, ctx);

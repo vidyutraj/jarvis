@@ -11,11 +11,12 @@ A personal voice assistant: the user talks to Claude in the Claude app's voice m
 - **Tool descriptions** are clear and specific: what the tool does, exactly when to use it, and how to prepare the input.
 - **Secrets** come only from `wrangler secret put` (production) or `.dev.vars` (local, gitignored). Never put them in code, tests, logs or error messages.
 - **The Gmail integration must NEVER have a send tool.** Search, read and create_draft only.
-- **Destructive tools** (e.g. `jarvis_delete_event`) set `destructiveHint: true` and their description tells Claude to confirm the exact item with the user before calling. Prefer edits over delete-and-recreate.
+- **Destructive tools** (e.g. `jarvis_delete_event`) set `destructiveHint: true` and their description tells Claude to confirm the exact item with the user before calling. Exception: `/ask` swaps the delete rule for "act if exactly one item matches" (owner's choice). Prefer edits over delete-and-recreate.
 - One tool per file in `src/tools/`, registered in `src/tools/index.ts`. Follow the `add-mcp-tool` skill.
 - External API calls live in `src/lib/`. They return typed results, never throw, and always use a timeout.
 - **Bank (Plaid):** follow `PLAID_PLAN.md`; consult the Plaid MCP's `build_guidance` before changing Plaid code and re-run `build_check_acceptance` after. Access/link tokens are encrypted in D1 and never logged (log `request_id` / `link_session_id` only). `/plaid/webhook` must verify Plaid's signature before doing anything; bank work runs as small Queue jobs (free plan: 10 ms CPU per invocation).
-- **Auth:** `/mcp` is OAuth-protected; only `ALLOWED_EMAIL` can sign in (checked at sign-in and on every request). Never add an unauthenticated route to tools. Tools get the signed-in user via `context.auth`; Google calls use `getGoogleAccessToken()` from `src/lib/google-auth.ts`. Never log tokens, codes or URLs containing them.
+- **"Hey Jarvis" (`POST /ask`):** an iPhone Shortcut sends dictated text; the Worker runs a Claude API tool loop (`src/ask/`, model from the `ASK_MODEL` var, Haiku 5.5) over the same `tools` list (minus `ping`), acting as the owner via the Google refresh token saved (encrypted, KV) at sign-in/refresh. It needs `Authorization: Bearer <JARVIS_ASK_KEY>` (constant-time check, rate limited first) and `ANTHROPIC_API_KEY`. Replies are plain spoken text. Never log what was said. New tools appear there automatically, so the Gmail no-send rule applies to `/ask` too.
+- **Auth:** `/mcp` is OAuth-protected; only `ALLOWED_EMAIL` can sign in (checked at sign-in and on every request). Never add an unauthenticated route to tools (`/ask` is key-protected, not OAuth). Tools get the signed-in user via `context.auth`; Google calls use `getGoogleAccessToken()` from `src/lib/google-auth.ts`. Never log tokens, codes or URLs containing them.
 
 ## Commands
 

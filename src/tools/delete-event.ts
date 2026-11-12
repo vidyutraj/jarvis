@@ -11,12 +11,15 @@ import {
 import { defineTool } from "./types";
 import { findEventFields } from "./update-event";
 
+/** The confirm-first rule. "Hey Jarvis" (/ask) swaps it out: the owner turned confirmations off there. */
+export const DELETE_CONFIRM_RULE =
+	"This can't be undone: before calling, say which event you'll delete (title, day and time) and wait for the user to confirm.";
+
 export const deleteEventTool = defineTool({
 	name: "jarvis_delete_event",
 	description: (context) =>
 		`Delete an event from the user's Google Calendar. ${USE_JARVIS_FOR_CALENDAR} ` +
-		`${dateContext(context)} This can't be undone: before calling, say which event you'll delete ` +
-		`(title, day and time) and wait for the user to confirm. For a repeating event, delete just that ` +
+		`${dateContext(context)} ${DELETE_CONFIRM_RULE} For a repeating event, delete just that ` +
 		`occurrence unless the user clearly says all of them. To move an event, use ` +
 		`jarvis_update_event instead of deleting and re-adding it.`,
 	inputSchema: z.object(findEventFields),
